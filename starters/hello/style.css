@@ -1,0 +1,25 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #fdf6ec;
+  color: #2b2b2b;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+main {
+  max-width: 32rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+button {
+  font: inherit;
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: #ff7a59;
+  color: white;
+  cursor: pointer;
+}

@@ -1,0 +1,5 @@
+{
+  "title": "Canvas game",
+  "description": "A tiny arrow-key game on a <canvas>",
+  "order": 1
+}

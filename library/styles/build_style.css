@@ -1,0 +1,1780 @@
+/* ==================================================
+   SHARED SITE STYLES
+   
+   Design tokens, layout shell, and every component
+   reused across more than one page.
+   
+   Page-specific rules belong in the matching file:
+     pretask_styles/pretask.css
+     pretask_styles/plant_detective.css
+     lesson1_styles/lesson1_activities.css
+     lesson2_styles/lesson2.css
+     lesson3_styles/lesson3.css
+     reasoned_prediction_builder.css
+   ================================================== */
+
+:root {
+  /* Core GTAC palette */
+  --cream: #f9f6e7;
+  --paper: #fffdf4;
+  --yellow: #ffcd1d;
+  --orange: #ff6d3a;
+  --green: #00c77a;
+  --mint: #67e5c1;
+  --purple: #4e32e8;
+  --lavender: #c0adff;
+  --blue: #75dde8;
+  --charcoal: #30332f;
+
+  /* Functional aliases */
+  --bg: var(--cream);
+  --card: var(--paper);
+  --text: var(--charcoal);
+  --muted: #62655f;
+  --line: var(--charcoal);
+
+  --soft-yellow: #fff0a8;
+  --soft-orange: #ffd3c3;
+  --soft-green: #d7f5e9;
+  --soft-purple: #ded7ff;
+  --soft-blue: #d7f2f4;
+
+  --button: var(--green);
+  --button-hover: var(--purple);
+
+  --shadow-small: 0 4px 0 var(--charcoal);
+  --shadow-medium: 0 6px 0 var(--charcoal);
+  --shadow: rgb(0 0 0 / 0.05);
+
+  touch-action: pan-x pan-y;
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+
+  background: var(--cream);
+  color: var(--text);
+
+  font-family: "DM Sans", Arial, sans-serif;
+}
+
+.page {
+  width: min(1180px, 94%);
+  margin: 0 auto;
+  padding: 38px 0 60px;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+
+  user-drag: none;
+  -webkit-user-drag: none; /* for Safari */
+  -moz-user-drag: none; /* for Firefox */
+  -ms-user-drag: none; /* for Internet Explorer */
+}
+
+/* ---------- Scrollbar ----------*/
+::-webkit-scrollbar {
+  overflow-y: auto;
+  width: 8px;
+  scrollbar-color: var(--line) transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  border: 0px solid transparent;
+  background: var(--button-hover);
+  width: 8px;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------- Checkbox Inputs ------------*/
+input[type="checkbox"]::before {
+  content: "✓";
+
+  color: var(--charcoal);
+  font-size: 14px;
+  font-weight: bold;
+
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+
+  width: 20px;
+  height: 20px;
+
+  background: var(--paper);
+  border: 2px solid var(--charcoal);
+  border-radius: 4px;
+
+  display: grid;
+  place-content: center;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--soft-green);
+}
+
+/* Animate the symbol in */
+input[type="checkbox"]:checked::before {
+  opacity: 1;
+  transform: scale(1);
+  animation: pop-fade-in 0.5s ease-out; 
+}
+
+/* Optional click animation */
+input[type="checkbox"]:active {
+  transform: scale(0.9);
+}
+
+/* ---------- Lesson introduction ---------- */
+
+.lesson-intro {
+  position: relative;
+
+  margin-bottom: 34px;
+  padding-top: 40px;
+}
+
+.lesson-heading {
+  max-width: 900px;
+  margin: 0 auto 22px;
+
+  text-align: center;
+}
+
+.lesson-label {
+  display: inline-block;
+
+  margin-bottom: 12px;
+  padding: 8px 16px;
+
+  background: var(--purple);
+  color: white;
+
+  border: 2px solid var(--line);
+  border-radius: 999px;
+
+  box-shadow: 0 3px 0 var(--line);
+
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lesson-heading h1 {
+  margin: 0 0 14px;
+
+  color: var(--text);
+
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.lesson-summary {
+  max-width: 700px;
+  margin: 0 auto;
+  margin-bottom: 10px;
+
+  color: var(--muted);
+
+  font-size: 1.06rem;
+  line-height: 1.7;
+}
+
+.save-work-button {
+  margin-top: 12px;
+  justify-self: start;
+  align-items: center;
+
+  z-index: inherit;
+
+  background: var(--purple) !important;
+  color: var(--paper) !important;
+
+  display: block;
+  width: fit-content;
+  margin: 28px auto 0;
+}
+
+.save-work-button:hover {
+  background: var(--green);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--line);
+}
+
+.save-work-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.intro-card h2 {
+  margin: 0 0 9px;
+
+  color: var(--text);
+
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.intro-eyebrow {
+  margin: 0 0 7px !important;
+
+  color: var(--purple) !important;
+
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.intro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.intro-card {
+  position: relative;
+  padding: 26px;
+
+  background: var(--paper);
+  border: 3px solid var(--charcoal);
+  border-radius: 24px;
+
+  box-shadow: var(--shadow-small);
+}
+
+.intro-card::before {
+  content: "";
+  display: block;
+
+  width: 54%;
+  margin: 0 0 18px;
+
+  border-top: 3px dashed var(--mint);
+}
+
+.intro-card p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.objectives-card {
+  border-top: 10px solid var(--orange);
+}
+
+.observation-card {
+  border-top: 10px solid var(--purple);
+}
+
+.objective-list {
+  margin: 16px 0 0;
+  padding: 0;
+
+  list-style: none;
+
+  counter-reset: objective;
+}
+
+.objective-list li {
+  position: relative;
+  display: block;
+  min-height: 42px;
+  margin-bottom: 12px;
+  padding: 30px 12px 30px 50px;
+
+  background: white;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+
+  box-shadow: 0 3px 0 rgba(48, 51, 47, 0.16);
+
+  color: var(--text);
+  line-height: 1.45;
+
+  counter-increment: objective;
+}
+
+.objective-list li:last-child {
+  margin-bottom: 0;
+}
+
+.objective-list li::before {
+  content: counter(objective);
+
+  position: absolute;
+  left: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+
+  background: var(--yellow);
+  border: 2px solid var(--line);
+  border-radius: 50%;
+
+  color: var(--text);
+  font-weight: 700;
+}
+
+.learning-objective-text {
+  margin: 12px 0 18px;
+  padding: 14px 16px;
+
+  background: var(--soft-yellow);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+
+  box-shadow: 0 3px 0 rgba(48, 51, 47, 0.18);
+
+  color: var(--text) !important;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.success-heading {
+  margin: 0 0 10px !important;
+
+  color: var(--text) !important;
+
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stw-explanation {
+  display: grid;
+  gap: 9px;
+
+  margin-top: 16px;
+}
+
+.stw-explanation div {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+
+  background: var(--soft-yellow);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+}
+
+.stw-explanation strong {
+  color: var(--text);
+}
+
+.stw-explanation span {
+  color: var(--muted);
+}
+
+.stw-explanation div:nth-child(2) {
+  background: var(--soft-green);
+}
+
+.stw-explanation div:nth-child(3) {
+  background: var(--soft-purple);
+}
+
+/* ---------- Static question check rows (lesson 1 but can reuse) ---------- */
+
+.question-check-icon.correct {
+  background: var(--soft-green);
+  color: var(--text);
+}
+
+.question-check-icon.incorrect {
+  background: var(--soft-orange);
+  color: var(--text);
+}
+
+@media (max-width: 800px) {
+  .intro-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .save-work-button {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .botanist-mission {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-heading h1 {
+    font-size: 2rem;
+  }
+
+  .stw-explanation div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+.section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(63, 70, 63, 0.07);
+  animation: pop-fade-in 0.5s ease;
+}
+
+.locked {
+  display: none !important;
+}
+
+/*
+  Shared activity framework (scripts/activities/). An activity whose
+  data-activity-depends-on hasn't been met yet gets this instead of
+  being hidden outright, so a page can still show it as "locked" in
+  place rather than making it disappear.
+*/
+[data-activity-hidden][hidden] {
+  display: none !important;
+}
+
+.activity-unavailable {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.video-box,
+.plant-canvas,
+.label-bank,
+.diagram-box,
+.writing-box {
+  border-radius: 20px;
+  color: var(--muted);
+}
+
+.delete-answer {
+  background: var(--soft-orange);
+  border: 2px solid var(--charcoal);
+  color: var(--text);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.label-bank {
+  min-height: 280px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  padding: 16px;
+}
+
+/* ---------- Post-it brainstorm ---------- */
+
+.postit-answer .brainstorm-answer.visible {
+  display: flex;
+}
+
+/* Class for making something pop and fade into the screen */
+.pop-in {
+  animation: pop-fade-in 0.5s ease
+}
+
+@keyframes pop-fade-in {     
+  0% {
+      opacity: 0;
+      transform: translateY(0) scale(0.5);
+  }
+  30% {
+      opacity: 1;
+      transform: translateY(-6px);
+  }
+  60% {
+      transform: translateY(2px) scale(1);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.floating-title::before {
+  position: absolute;
+  top: -16px;
+  left: 18px;
+
+  padding: 4px 12px;
+
+  background: var(--blue);
+
+  border: 2px solid var(--line);
+  border-radius: 999px;
+
+  color: var(--text);
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.diagram-activity {
+  display: block;
+  padding: 18px;
+  margin-bottom: 20px;
+  background: #ffffff;
+  border: 1px dashed var(--line);
+}
+
+.activity-instruction {
+  margin: 0 0 16px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  width: 90%;
+  max-width: 1500px;
+  margin: 0 auto;
+  margin-top: 55px;
+  padding-left: 40px;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  row-gap: 0.6rem;
+  align-items: center;
+
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.home-button {
+  border-top: 5px solid var(--yellow) !important;
+  pointer-events: auto;
+}
+
+.glossary-button {
+  border-top: 5px solid var(--purple) !important;
+  pointer-events: auto;
+}
+
+/* link back to Part B, sits beside Home in the header. */
+#back-to-part1-button {
+  grid-row: 2;
+
+  background: var(--card);
+  color: var(--text);
+
+  border-top: 5px solid var(--green);
+
+  pointer-events: auto;
+}
+
+#back-to-part1-button:hover {
+  background: var(--soft-green);
+}
+
+.next-page-button {
+  margin-top: 20px;
+  padding: 12px 22px;
+
+  width: fit-content;
+
+  background: var(--card) !important;
+  color: var(--charcoal) !important;
+
+  border-top: 5px solid var(--green) !important;
+  border-radius: 12px;
+
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.next-page-button::after {
+  content: "  →";
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.next-page-button:hover::after {
+  transform: translateX(4px);
+}
+
+/*
+  The header ignores clicks so students can select the
+  page underneath it, so every control placed in it has
+  to switch clicks back on. The pretask page keeps its
+  save button up here.
+*/
+.save-work-button {
+  pointer-events: auto;
+}
+
+.home-button,
+.glossary-button {
+  background: var(--card) !important;
+  color: var(--text) !important;
+}
+
+.home-button:hover {
+  background: var(--soft-yellow) !important;
+}
+
+.glossary-button:hover {
+  background: var(--soft-purple) !important;
+}
+
+.glossary-button {
+  justify-self: end;
+}
+
+.return-to-top {
+  display: grid;
+  place-items: center;
+}
+
+.return-to-top-button {
+  display: inline-block;
+  width: 15rem;
+  text-decoration: none;
+  text-align: center;
+  color: var(--text) !important;
+  background: var(--paper) !important;
+}
+
+.return-to-top-button:hover {
+  background: var(--soft-green) !important;
+}
+
+.bounce-symbol {
+  display: inline-block;
+  margin: 0px;
+}
+
+.general-button:hover .bounce-symbol {
+  animation: hoverSymbolBounce 0.5s ease;
+}
+
+@keyframes hoverSymbolBounce {
+  0% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+  60% {
+    transform: translateY(2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.completed-note {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  display: none;
+  animation: pop-fade-in 0.5s ease;
+}
+
+.section.completed .completed-note {
+  display: block;
+}
+
+.section.completed .next-button {
+  display: none !important;
+}
+
+/* ==================================================
+   MODAL OPENING ANIMATION
+
+   Any modal can grow out of whatever the student
+   clicked to open it. growModalFromTrigger() in
+   common_functions.js measures the trigger and sets
+   three custom properties on the modal's box:
+
+     --origin-x / --origin-y  the trigger's centre,
+                              measured from the box's
+                              own top-left corner
+     --start-scale            the trigger's width as a
+                              fraction of the box's
+
+   Scaling from that origin starts the box sitting over
+   the trigger and expands it into place. The fallbacks
+   below are a plain grow-from-the-middle, used when
+   there is no trigger to grow from.
+   ================================================== */
+
+.modal-grow-in {
+  transform-origin: var(--origin-x, 50%) var(--origin-y, 50%);
+  animation: modal-grow 0.32s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes modal-grow {
+  from {
+    transform: scale(var(--start-scale, 0.2));
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-grow-in {
+    animation: none;
+  }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(39, 42, 36, 0.35);
+  z-index: 2000;
+  padding: 24px;
+}
+
+.modal-content {
+  background: #fffdf5;
+  width: min(720px, 100%);
+  margin: 50px auto;
+  padding: 28px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(63, 70, 63, 0.18);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #4f5c57;
+}
+
+.close-button {
+  border: none;
+  background: var(--soft-orange);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.vocab-list {
+  display: grid;
+  gap: 14px;
+}
+
+.vocab-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.vocab-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #3f463f;
+}
+
+.vocab-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ---------- Hidden teacher navigation ---------- */
+
+#teacherTrigger {
+  user-select: none;
+}
+
+.teacher-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  padding: 24px;
+  background: rgba(39, 42, 36, 0.42);
+  align-items: center;
+  justify-content: center;
+}
+
+.teacher-modal.open {
+  display: flex;
+}
+
+.teacher-panel {
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+
+  background: #fffdf5;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 26px;
+
+  box-shadow: 0 20px 55px rgba(39, 42, 36, 0.24);
+}
+
+.teacher-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.teacher-label {
+  margin: 0 0 5px;
+  color: var(--button-hover);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.teacher-panel-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.55rem;
+}
+
+.teacher-close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: var(--soft-orange);
+  color: var(--text);
+
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.teacher-section-list {
+  display: grid;
+  gap: 10px;
+}
+
+.teacher-section-list button {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 13px 16px;
+
+  background: #ffffff;
+  color: var(--text);
+
+  text-align: left;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.teacher-section-list button:hover {
+  background: var(--soft-green);
+  transform: translateX(3px);
+}
+
+.teacher-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.teacher-secondary-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 11px 14px;
+
+  background: var(--soft-blue);
+  color: var(--text);
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.teacher-secondary-button:hover {
+  background: var(--soft-green);
+}
+
+.teacher-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .teacher-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .label-bank {
+    min-height: 160px;
+  }
+}
+
+.drop-zone.drag-over {
+  transform: scale(1.1);
+  opacity: 0.7;
+}
+
+.part {
+  cursor: grab;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  user-select: none;
+  max-width: 150px;
+  max-height: 150px;
+}
+
+.part img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .part {
+    max-width: 15vw;
+    max-height: 15vw;
+  }
+}
+
+.part:active {
+  cursor: grabbing;
+}
+
+.part:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.part.placed {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.tab:not(.active) {
+  background: var(--soft-green);
+  color: #30332f;
+}
+
+/* ---------- Main lesson sections ---------- */
+
+.section {
+  position: relative;
+
+  margin-bottom: 38px;
+  padding: 28px;
+
+  background: var(--paper);
+  border: 3px solid var(--charcoal);
+  border-radius: 26px;
+
+  box-shadow: var(--shadow-medium);
+}
+
+.section-title {
+  display: inline-block;
+  align-items: center;
+
+  margin: -8px 0 22px;
+  padding: 9px 18px;
+
+  background: var(--yellow);
+  color: var(--charcoal);
+
+  border: 2px solid var(--charcoal);
+  border-radius: 12px;
+
+  box-shadow: 0 3px 0 var(--charcoal);
+
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+/*-- Pretask section intro bubble colours */
+#watch .section-title {
+  background: var(--yellow);
+}
+
+#build .section-title {
+  background: var(--mint);
+}
+
+#brainstorm .section-title {
+  background: var(--orange);
+  color: white;
+}
+
+#diagram .section-title {
+  background: var(--lavender);
+}
+
+#detective .section-title {
+  background: var(--blue);
+}
+
+#final-brainstorm .section-title {
+  background: var(--purple);
+  color: white;
+}
+
+/*-- Lesson 1 intro bubble colours --*/
+
+#observe-experiment .section-title {
+  background: var(--green);
+}
+
+#testable-questions .section-title {
+  background: var(--orange);
+}
+
+#testable-question-intro .section-title {
+  background: var(--blue);
+}
+
+/* ==================================================
+   TESTABLE QUESTION ACTIVITY
+   ================================================== */
+
+.question-structure-card,
+.testable-question-activity {
+  margin-bottom: 24px;
+  padding: 22px;
+
+  border: 3px solid var(--line);
+  border-radius: 20px;
+
+  box-shadow: 0 5px 0 var(--line);
+}
+
+.question-structure-card {
+  background: var(--soft-blue);
+}
+
+/* ---------- Example question structures ---------- */
+
+.question-structure-card h3 {
+  margin: 0 0 16px;
+
+  color: var(--text);
+
+  font-size: 1.2rem;
+}
+
+/* ---------- Wheel and question builder layout ---------- */
+
+.reset-btn {
+  background: var(--orange) !important;
+}
+
+.reset-button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* ---------- Wheel ---------- */
+
+.spin-wheel-button:disabled,
+.save-testable-question-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* One card is created after every spin */
+
+.wheel-question-card.saved {
+  background: white;
+  border-color: var(--green);
+}
+
+/* Save button and validation message */
+
+.wheel-question-message.visible {
+  display: block;
+}
+
+/* ---------- Plant builder ---------- */
+
+.tab-button .active,
+.tab-button button.active {
+  background: var(--yellow) !important;
+}
+
+/* ---------- Post-it brainstorm ---------- */
+
+.image-box {
+  margin: 20px 0;
+
+  border: 3px solid var(--line);
+  border-radius: 20px;
+
+  overflow: hidden;
+
+  background: white;
+
+  box-shadow: 0 5px 0 var(--line);
+}
+
+.image-box img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Diagram ---------- */
+
+.diagram-activity,
+.thinglink-box {
+  border: 3px solid var(--line);
+  border-radius: 20px;
+
+  box-shadow: 0 5px 0 var(--line);
+}
+
+/* ---------- Download and navigation buttons ---------- */
+
+.general-button {
+  position: relative;
+  padding: 12px 22px;
+
+  background: var(--button);
+  color: white;
+
+  border: 2px solid var(--charcoal);
+  border-radius: 12px;
+
+  box-shadow: 0 4px 0 var(--charcoal);
+
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  animation: pop-fade-in 0.5s ease-out;
+
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.general-button p {
+  display: inline-block;
+  margin: 0px;
+}
+
+.general-button a {
+  text-decoration: none;
+  display: inline-block;
+  margin: 0px;
+  color: inherit;
+  width: 100%;
+  height: 100%;
+}
+
+.general-button:hover {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.general-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.watch-video-button {
+  color: var(--charcoal);
+  background: var(--soft-green);
+  border-radius: 6px;
+  padding: 5px;
+}
+
+.watch-video-button:hover {
+  background: var(--soft-yellow);
+}
+
+.watch-video-button:hover {
+  background: var(--soft-purple);
+}
+
+.watch-video-button:hover{
+  background: var(--soft-blue);
+}
+
+.stop-and-check::before {
+  content: "STOP AND THINK";
+
+  position: absolute;
+  top: -16px;
+  left: 18px;
+
+  padding: 4px 12px;
+
+  background: var(--orange);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+
+  color: var(--paper);
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.stop-and-check-answer {
+  position: relative;
+  margin-top: 15px;
+  background-color: var(--soft-green);
+  border-radius: 16px;
+  padding: 10px 15px;
+  padding-top: 15px;
+  margin-top: 20px;
+  border: 2px solid var(--charcoal);
+  border-top: 4px solid var(--green);
+  animation: pop-fade-in 0.5s ease-out;
+}
+
+.stop-and-check-answer::before {
+  content: "ANSWER";
+  text-transform: uppercase;
+
+  position: absolute;
+  top: -16px;
+  left: 18px;
+
+  padding: 4px 12px;
+
+  background: var(--green);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+
+  color: var(--paper);
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.stop-and-check-button {
+  width: fit-content;
+  margin: 0 auto;
+  margin-top: 20px;
+  background: var(--yellow) !important;
+  color: var(--text) !important;
+}
+
+.stop-and-check-button[hidden] {
+  display: none;
+}
+
+.stop-and-check {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin: 30px 0 24px;
+  padding: 16px 18px;
+  border: 3px solid var(--charcoal);
+  border-top: 6px solid var(--orange);
+  background: var(--soft-orange);
+  box-shadow: 0 4px 0 var(--charcoal);
+  border-radius: 16px;
+  font-weight: 500;
+  color: var(--text);
+  animation: pop-fade-in 0.5s ease-out;
+}
+
+.stop-and-check[hidden] {
+  display: none;
+}
+
+.next-button {
+  margin-top: 20px;
+  padding: 12px 22px;
+
+  width: fit-content;
+
+  background: var(--orange);
+  color: white;
+
+  border: 2px solid var(--charcoal);
+  border-radius: 12px;
+
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.next-button::after {
+  content: "  →";
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.next-button:hover::after {
+  transform: translateX(4px);
+}
+
+.worksheet-button {
+  display: inline-block;
+  background: var(--yellow);
+  color: var(--text);
+  padding: 8px;
+
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  box-shadow: 0 4px 0 var(--line);
+
+  text-decoration: none;
+  font-weight: 700;
+
+  z-index: inherit;
+}
+
+.worksheet-button:hover {
+  background: var(--mint);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--line);
+}
+
+.worksheet-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+/* ---------- Completion message ---------- */
+
+.completed-note {
+  display: none;
+
+  width: fit-content;
+  padding: 9px 13px;
+
+  background: var(--soft-green);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.section.completed .completed-note {
+  display: block;
+}
+
+/* ---------- Modals ---------- */
+
+.modal-content,
+.teacher-panel {
+  background: var(--card);
+  border: 3px solid var(--line);
+  border-radius: 24px;
+
+  box-shadow: 0 8px 0 var(--line);
+}
+
+.vocab-card,
+.teacher-section-list button {
+  border: 2px solid var(--line);
+  border-radius: 14px;
+
+  box-shadow: 0 3px 0 rgba(48, 51, 47, 0.2);
+}
+
+.vocab-card:nth-child(4n + 1) {
+  border-left: 10px solid var(--yellow);
+}
+
+.vocab-card:nth-child(4n + 2) {
+  border-left: 10px solid var(--orange);
+}
+
+.vocab-card:nth-child(4n + 3) {
+  border-left: 10px solid var(--green);
+}
+
+.vocab-card:nth-child(4n + 4) {
+  border-left: 10px solid var(--purple);
+}
+
+.teacher-section-list button:hover {
+  background: var(--soft-yellow);
+}
+
+.teacher-secondary-button {
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  background: var(--soft-purple);
+
+  box-shadow: 0 3px 0 var(--line);
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* ==================================================
+   SHARED VIDEO MODAL
+   ================================================== */
+
+.video-modal {
+  overflow-y: auto;
+}
+
+.video-modal-content {
+  width: min(900px, 100%);
+}
+
+.video-modal-player {
+  display: block;
+
+  width: 100%;
+  max-height: 70vh;
+
+  background: #101110;
+
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+
+@media (max-width: 600px) {
+  .video-modal-content {
+    margin: 20px auto;
+    padding: 18px;
+  }
+}
+
+
+/* ==================================================
+   SHARED PDF MODAL
+   ================================================== */
+
+.pdf-modal {
+  overflow-y: auto;
+}
+
+.pdf-modal-content {
+  width: min(900px, 100%);
+}
+
+.pdf-modal-frame {
+  display: block;
+
+  /* Match the A3-portrait page shape so the fitted page fills the frame. */
+  width: min(100%, 50vh);
+  aspect-ratio: 1190 / 1684;
+
+  margin: 0 auto;
+
+  background: #ffffff;
+
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+
+.pdf-modal-actions {
+  display: flex;
+  justify-content: center;
+
+  margin-top: 16px;
+}
+
+@media (max-width: 600px) {
+  .pdf-modal-content {
+    margin: 20px auto;
+    padding: 18px;
+  }
+
+  .pdf-modal-frame {
+    width: 100%;
+  }
+}
+
+.pdf-modal-image {
+  display: block;
+
+  width: 100%;
+  max-height: 70vh;
+
+  object-fit: contain;
+
+  background: #ffffff;
+
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+
+/* ==================================================
+   SHARED IMAGE ZOOM MODAL
+   ================================================== */
+
+.image-zoom-modal-content {
+  width: min(760px, 100%);
+}
+
+.image-zoom-modal-image {
+  display: block;
+
+  width: 100%;
+  max-height: 75vh;
+
+  object-fit: contain;
+
+  background: #ffffff;
+
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+
+/* ==================================================
+   FULL-WIDTH LEARNING OBJECTIVE CARD
+   Used where the objective sits above the intro grid
+   rather than beside another card.
+   ================================================== */
+
+.objectives-card-wide {
+  margin-bottom: 22px;
+}
+
+.objectives-card-wide .objective-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.objectives-card-wide .objective-list li {
+  margin-bottom: 0;
+}
+
+@media (max-width: 800px) {
+  .objectives-card-wide .objective-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ----- Reasoned prediction check -----*/
+.prediction-check {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  width: min(700px, 100%);
+  margin: 24px auto 0;
+  padding: 22px;
+
+  background: white;
+
+  border: 3px solid var(--charcoal);
+  border-top: 8px solid var(--purple);
+  border-radius: 18px;
+
+  box-shadow: var(--shadow-small);
+
+  text-align: center;
+  box-sizing: border-box;
+
+  animation: pop-fade-in 0.5s ease;
+}
+
+.prediction-check[hidden] {
+  display: none;
+}
+
+.prediction-label {
+  margin: 0 0 6px;
+
+  color: var(--purple);
+
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prediction-check h3 {
+  margin: 0 0 8px;
+}
+
+.prediction-check > p:not(.prediction-label) {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.prediction-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.prediction-button.buzz {
+  box-shadow: none;
+  background: var(--orange);
+  transform: translateY(3px);
+  animation: predictionCheckBuzz 0.2s ease;
+}
+
+.prediction-button.buzz:hover {
+  background: var(--orange);
+  transform: translateY(3px);
+}
+
+.prediction-button {
+  color: var(--charcoal);
+  background: var(--soft-green);
+  min-width: 150px;
+}
+
+.prediction-button:hover {
+  background: var(--green);
+}
+
+.prediction-button.selected-answer {
+  color: var(--paper);
+  background: var(--button-hover);
+  box-shadow: none;
+  transform: translateY(3px);
+}
+
+.prediction-button.selected-answer:hover {
+  cursor: default;
+}
+
+@keyframes predictionCheckBuzz {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-6px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  75% {
+    transform: translateX(-3px);
+  }
+}

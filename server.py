@@ -235,161 +235,25 @@ def file_info(pdir):
             for rel in list_files(pdir)]
 
 
-TEMPLATES = {
-    "hello": {
-        "title": "Hello webpage",
-        "description": "HTML, CSS and JavaScript, ready to go",
-        "files": {
-            "index.html": """<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hello!</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
-  </head>
-  <body>
-    <main>
-      <h1>Hi there! 👋</h1>
-      <p>Edit <code>index.html</code>, <code>style.css</code> or <code>script.js</code>
-        and this page updates as you type.</p>
-      <button id="btn">Click me</button>
-      <p id="count"></p>
-    </main>
-  </body>
-</html>
-""",
-            "style.css": """body {
-  font-family: system-ui, sans-serif;
-  background: #fdf6ec;
-  color: #2b2b2b;
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
-  margin: 0;
-}
+# Starters ("New project" choices) are plain folders in starters/: a starter.json (title, description, order)
+# plus the files a new project begins with. Shared styles and scripts live in library/ and are linked from
+# projects as /_glitch/lib/..., so improving the library improves every project that uses it.
+STARTERS = ROOT / "starters"
+LIBRARY = ROOT / "library"
 
-main {
-  max-width: 32rem;
-  padding: 2rem;
-  text-align: center;
-}
 
-button {
-  font: inherit;
-  padding: 0.6rem 1.2rem;
-  border: 0;
-  border-radius: 999px;
-  background: #ff7a59;
-  color: white;
-  cursor: pointer;
-}
-""",
-            "script.js": """const btn = document.querySelector("#btn");
-const count = document.querySelector("#count");
-let clicks = 0;
-
-btn.addEventListener("click", () => {
-  clicks++;
-  count.textContent = `Clicked ${clicks} time${clicks === 1 ? "" : "s"}`;
-  console.log("click!", clicks);
-});
-""",
-        },
-    },
-    "game": {
-        "title": "Canvas game",
-        "description": "A tiny arrow-key game on a <canvas>",
-        "files": {
-            "index.html": """<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dot muncher</title>
-    <style>
-      body { margin: 0; background: #111; display: grid; place-items: center; height: 100vh; }
-      canvas { background: #1d1f2b; border-radius: 12px; max-width: 100%; }
-    </style>
-  </head>
-  <body>
-    <canvas id="game" width="480" height="360"></canvas>
-    <script src="game.js"></script>
-  </body>
-</html>
-""",
-            "game.js": """const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const keys = {};
-const player = { x: 240, y: 180, size: 20, speed: 3 };
-let dot = newDot();
-let score = 0;
-
-addEventListener("keydown", (e) => (keys[e.key] = true));
-addEventListener("keyup", (e) => (keys[e.key] = false));
-
-function newDot() {
-  return { x: 20 + Math.random() * 440, y: 20 + Math.random() * 320 };
-}
-
-function update() {
-  if (keys.ArrowLeft) player.x -= player.speed;
-  if (keys.ArrowRight) player.x += player.speed;
-  if (keys.ArrowUp) player.y -= player.speed;
-  if (keys.ArrowDown) player.y += player.speed;
-  player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-  player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
-
-  const dx = player.x + player.size / 2 - dot.x;
-  const dy = player.y + player.size / 2 - dot.y;
-  if (Math.hypot(dx, dy) < player.size) {
-    score++;
-    dot = newDot();
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#ffd166";
-  ctx.beginPath();
-  ctx.arc(dot.x, dot.y, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#06d6a0";
-  ctx.fillRect(player.x, player.y, player.size, player.size);
-  ctx.fillStyle = "white";
-  ctx.font = "16px system-ui";
-  ctx.fillText(`Score: ${score}  (use the arrow keys)`, 12, 24);
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-loop();
-""",
-        },
-    },
-    "blank": {
-        "title": "Blank page",
-        "description": "Just an index.html",
-        "files": {
-            "index.html": """<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>New project</title>
-  </head>
-  <body>
-
-  </body>
-</html>
-""",
-        },
-    },
-}
+def load_starters():
+    found = {}
+    for folder in sorted(STARTERS.iterdir()) if STARTERS.is_dir() else []:
+        meta_file = folder / "starter.json"
+        if not meta_file.is_file():
+            continue
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        files = {p.relative_to(folder).as_posix(): p
+                 for p in sorted(folder.rglob("*")) if p.is_file() and p != meta_file}
+        found[folder.name] = {"title": meta["title"], "description": meta.get("description", ""),
+                              "order": meta.get("order", 100), "files": files}
+    return dict(sorted(found.items(), key=lambda kv: (kv[1]["order"], kv[0])))
 
 
 def create_project(owner, template="hello", remix=None):
@@ -400,10 +264,12 @@ def create_project(owner, template="hello", remix=None):
         shutil.copytree(project_dir(remix), pdir, symlinks=False)
         label = f"Remixed from {remix}"
     else:
-        tpl = TEMPLATES.get(template) or TEMPLATES["hello"]
+        starters = load_starters()
+        tpl = starters.get(template) or starters["hello"]
         pdir.mkdir(parents=True)
-        for rel, text in tpl["files"].items():
-            (pdir / rel).write_text(text)
+        for rel, src in tpl["files"].items():
+            (pdir / rel).parent.mkdir(parents=True, exist_ok=True)
+            (pdir / rel).write_bytes(src.read_bytes())
         label = "Project created"
     x("INSERT INTO projects(name, owner, created, updated, remixed_from) VALUES(?,?,?,?,?)",
       (name, owner, now, now, remix))
@@ -877,11 +743,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.extra_headers.append(
             ("Set-Cookie", f"glitch_key={key}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax{secure}"))
 
-    def serve_static(self, rel):
-        full = (STATIC / rel).resolve()
-        if STATIC.resolve() not in full.parents or not full.is_file():
+    def serve_static(self, rel, base=STATIC, extra=()):
+        full = (base / rel).resolve()
+        if base.resolve() not in full.parents or not full.is_file():
             raise HTTPError(404, "Not found")
-        self.send(200, full.read_bytes(), content_type(full.name), [("Cache-Control", "no-cache")])
+        self.send(200, full.read_bytes(), content_type(full.name), [("Cache-Control", "no-cache"), *extra])
 
     # -- routing
 
@@ -893,6 +759,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         if path == "/_glitch/bridge.js":
             return self.serve_static("bridge.js")
+        if path.startswith("/_glitch/lib/"):
+            # Open to any origin so projects served from a preview subdomain can still load it.
+            return self.serve_static(path[len("/_glitch/lib/"):], LIBRARY, [("Access-Control-Allow-Origin", "*")])
         if PREVIEW_HOST and host.endswith("." + PREVIEW_HOST):
             return self.preview(host[: -len(PREVIEW_HOST) - 1], path[1:], "/")
         if path.startswith("/p/"):
@@ -974,7 +843,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "ai": ai_allowed(user),
                 "build": build_info(),
                 "templates": [{"id": k, "title": v["title"], "description": v["description"]}
-                              for k, v in TEMPLATES.items()],
+                              for k, v in load_starters().items()],
             })
         if parts == ["login"] and method == "POST":
             key = (self.json_body().get("key") or "").strip()

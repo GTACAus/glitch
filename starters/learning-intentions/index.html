@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My lesson</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- The shared GTAC look and behaviour. Leave these three lines as they are. -->
+  <link href="/_glitch/lib/styles/build_style.css" rel="stylesheet">
+  <script src="/_glitch/lib/scripts/common_functions.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+
+<body>
+  <main class="page">
+
+    <header class="lesson-intro">
+      <div class="lesson-heading">
+        <!-- EDIT: the small label above the title, e.g. "Lesson 1" -->
+        <span class="lesson-label">Lesson 1</span>
+
+        <!-- EDIT: the lesson title and a one or two sentence summary -->
+        <h1>Your lesson title</h1>
+        <p class="lesson-summary">
+          A short summary of what students will do in this lesson.
+        </p>
+      </div>
+
+      <section class="intro-card objectives-card objectives-card-wide">
+        <p class="intro-eyebrow">Learning intention</p>
+
+        <!-- EDIT: what students will learn -->
+        <p class="learning-objective-text">
+          Students will learn to ... (write your learning intention here).
+        </p>
+
+        <p class="success-heading">Success criteria</p>
+
+        <!-- EDIT: one <li> per success criterion. Copy a whole <li>...</li> line to add another. -->
+        <ol class="objective-list">
+          <li>I can ... (first success criterion)</li>
+          <li>I can ... (second success criterion)</li>
+          <li>I can ... (third success criterion)</li>
+        </ol>
+      </section>
+    </header>
+
+    <!-- Each .section is one step. The next one stays locked until the student presses Next. -->
+    <section class="section" id="activity-one">
+      <h2 class="section-title">Start by thinking</h2>
+
+      <div class="diagram-box diagram-activity">
+        <!-- EDIT: the instruction students will read -->
+        <p class="activity-instruction">
+          What do you already know about this topic? Type an idea and press <strong>Add</strong>.
+          Add at least two ideas to continue.
+        </p>
+      </div>
+
+      <!-- Students type ideas and see them appear. They need 2 before Next appears. -->
+      <div id="ideasActivity" data-activity>
+        <div data-tr-group data-tr-key="ideas" data-tr-min="2">
+          <input data-tr-input type="text" placeholder="Type an idea">
+          <button data-tr-add class="general-button">Add</button>
+          <ul data-tr-list></ul>
+        </div>
+      </div>
+
+      <button class="next-button general-button" onclick="unlockSection('activity-two', 'activity-one')" hidden>
+        Next
+      </button>
+      <p class="completed-note">Completed — next activity unlocked.</p>
+    </section>
+
+    <section class="section locked" id="activity-two">
+      <h2 class="section-title">Check your understanding</h2>
+
+      <div class="diagram-box diagram-activity">
+        <p class="activity-instruction">
+          Now look back at the success criteria at the top of the page. Write one thing you can now do.
+        </p>
+      </div>
+
+      <div id="reflectActivity" data-activity>
+        <div data-tr-group data-tr-key="reflection" data-tr-min="1" data-tr-max="1">
+          <input data-tr-input type="text" placeholder="I can ...">
+          <button data-tr-add class="general-button">Add</button>
+          <div data-tr-list></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
