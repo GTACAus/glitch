@@ -112,7 +112,18 @@
         <span class="base" id="previewBase"></span>
         <input id="previewPath" spellcheck="false" placeholder="index.html">
       </div>
-      <iframe id="frame" title="Preview"></iframe>
+      <div class="frame-wrap">
+        <iframe id="frame" title="Preview"></iframe>
+        <aside id="stylePanel" class="style-panel" hidden>
+          <div class="pane-head"><span>Choose style</span><button id="styleClose" class="icon-btn" title="Close">×</button></div>
+          <div id="styleTarget" class="style-target"></div>
+          <div id="styleList" class="style-list"></div>
+          <div class="style-foot">
+            <button id="styleReset" class="btn small" type="button">Reset</button>
+            <button id="styleAsk" class="btn small primary" type="button">Ask AI to keep this ✦</button>
+          </div>
+        </aside>
+      </div>
       <div class="logs" id="logs">
         <div class="logs-head">
           <button id="logsToggle" class="btn small">▸ Logs<span id="errCount" class="badge" hidden></span></button>

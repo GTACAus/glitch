@@ -36,7 +36,7 @@ def load_env(path):
     """Read KEY=VALUE lines from a gitignored .env so secrets stay out of the code and the unit file."""
     if not path.is_file():
         return
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         k, sep, v = line.strip().partition("=")
         if sep and k and not k.startswith("#"):
             os.environ.setdefault(k.strip(), v.strip().strip("'\""))
@@ -403,7 +403,7 @@ def create_project(owner, template="hello", remix=None):
         tpl = TEMPLATES.get(template) or TEMPLATES["hello"]
         pdir.mkdir(parents=True)
         for rel, text in tpl["files"].items():
-            (pdir / rel).write_text(text)
+            (pdir / rel).write_text(text, encoding="utf-8", newline="\n")
         label = "Project created"
     x("INSERT INTO projects(name, owner, created, updated, remixed_from) VALUES(?,?,?,?,?)",
       (name, owner, now, now, remix))
@@ -551,7 +551,7 @@ def ai_context(pdir, current, selection):
             parts.append(f"=== {rel} (binary file, {(pdir / rel).stat().st_size} bytes) ===")
             continue
         try:
-            text = (pdir / rel).read_text()
+            text = (pdir / rel).read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
         if used + len(text) > AI_CONTEXT_CHARS:
@@ -672,7 +672,7 @@ def ai_changes(pdir, out):
             return None
 
     def text_of(full, rel):
-        return None if is_binary(rel) else full.read_text(errors="replace")
+        return None if is_binary(rel) else full.read_text(encoding="utf-8", errors="replace")
 
     changes, claimed = [], set()  # claimed: paths some change already uses, so two can't fight over one
 
@@ -703,7 +703,7 @@ def ai_changes(pdir, out):
             continue
         if rel in claimed:
             continue
-        before = full.read_text(errors="replace") if full.is_file() else None
+        before = full.read_text(encoding="utf-8", errors="replace") if full.is_file() else None
         if before != f["content"]:
             changes.append({"kind": "edit" if before is not None else "add", "path": rel,
                             "before": before, "after": f["content"]})
@@ -740,7 +740,7 @@ def ai_ideas(pdir, current):
     full = safe_path(pdir, rel)
     if not full.is_file() or is_binary(rel):
         raise HTTPError(400, "Open a code file first, then ask for suggestions")
-    text = full.read_text(errors="replace")[:AI_CONTEXT_CHARS]
+    text = full.read_text(encoding="utf-8", errors="replace")[:AI_CONTEXT_CHARS]
     others = ", ".join(r for r in list_files(pdir) if r != rel) or "none"
     out = call_ai(IDEAS_SYSTEM, [{"role": "user", "content":
         f"Other files in the project: {others}\n\n=== {rel} ===\n{text}"}], {
@@ -765,7 +765,7 @@ def ai_allowed(user):
 def build_info():
     """What deploy/deploy.sh stamped into build.json (commit and times), or None when run from a checkout."""
     try:
-        return json.loads((ROOT / "build.json").read_text())
+        return json.loads((ROOT / "build.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
 

@@ -97,6 +97,7 @@ async function init() {
   setupEditor();
   setupFiles();
   setupPreview();
+  setupContextMenu();
   setupSplitter();
   setupHistory();
   setupAi();
@@ -451,13 +452,150 @@ function setupPreview() {
   addEventListener('message', (e) => {
     if (e.source !== $('#frame').contentWindow || !e.data || !e.data.__glitch) return;
     if (e.data.type === 'log') addLog(e.data.level, e.data.text);
+    if (e.data.type === 'contextmenu') showCtxMenu(e.data);
+    if (e.data.type === 'dismiss') hideCtxMenu();
+    if (e.data.type === 'styles') fillStylePanel(e.data.values);
     if (e.data.type === 'loaded') {
+      closeStylePanel();
       const basePath = new URL(previewRoot(), location.href).pathname;
       const p = decodeURIComponent(e.data.path || '');
       S.framePath = p.startsWith(basePath) ? p.slice(basePath.length) : p.replace(/^\//, '');
       $('#previewPath').value = S.framePath;
     }
   });
+}
+
+// ------------------------------------------------------------------ preview right-click menu
+
+const STYLE_GROUPS = {
+  Text: [['color', 'color'], ['font-size'], ['font-weight', ['100', '200', '300', '400', '500', '600', '700', '800', '900']],
+    ['font-style', ['normal', 'italic']], ['font-family'], ['line-height'], ['letter-spacing'],
+    ['text-align', ['left', 'center', 'right', 'justify']], ['text-decoration-line', ['none', 'underline', 'line-through']],
+    ['text-transform', ['none', 'uppercase', 'lowercase', 'capitalize']]],
+  Background: [['background-color', 'color'], ['background-image'], ['background-size'], ['opacity']],
+  Box: [['width'], ['height'], ['margin'], ['padding'], ['box-shadow']],
+  Border: [['border-width'], ['border-style', ['none', 'solid', 'dashed', 'dotted', 'double']],
+    ['border-color', 'color'], ['border-radius']],
+  Layout: [['display', ['block', 'inline', 'inline-block', 'flex', 'grid', 'none']],
+    ['position', ['static', 'relative', 'absolute', 'fixed', 'sticky']],
+    ['flex-direction', ['row', 'column', 'row-reverse', 'column-reverse']],
+    ['justify-content', ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly']],
+    ['align-items', ['stretch', 'flex-start', 'center', 'flex-end', 'baseline']], ['gap'],
+    ['overflow', ['visible', 'hidden', 'scroll', 'auto']], ['cursor']],
+};
+const STYLE_PROPS = Object.values(STYLE_GROUPS).flat().map(([p]) => p);
+
+function sendFrame(msg) {
+  try { $('#frame').contentWindow.postMessage({ __glitchCmd: true, ...msg }, '*'); } catch {}
+}
+
+function hideCtxMenu() {
+  S.ctx?.remove();
+  S.ctx = null;
+}
+
+function showCtxMenu(info) {
+  hideCtxMenu();
+  const r = $('#frame').getBoundingClientRect();
+  const canAsk = !!S.me.ai && S.project.can_edit;
+  const item = (label, fn, disabled = false, title = '') => {
+    const b = el('button', { type: 'button', textContent: label, disabled, title });
+    b.onclick = () => { hideCtxMenu(); fn(); };
+    return b;
+  };
+  const menu = el('div', { className: 'ctx-menu', role: 'menu' },
+    item('🎨 Choose style', () => openStylePanel(info)),
+    item('✦ Ask AI', () => askAboutElement(info), !canAsk, canAsk ? '' : 'AI is not available here'));
+  document.body.append(menu);
+  const x = Math.min(r.left + info.x, innerWidth - menu.offsetWidth - 4);
+  const y = Math.min(r.top + info.y, innerHeight - menu.offsetHeight - 4);
+  menu.style.left = `${Math.max(x, 4)}px`;
+  menu.style.top = `${Math.max(y, 4)}px`;
+  S.ctx = menu;
+  menu.querySelector('button:not(:disabled)')?.focus();
+}
+
+function askAboutElement(info) {
+  const input = $('#aiInput');
+  input.value = `About this element (${info.selector}):\n\`\`\`html\n${info.html}\n\`\`\`\n\n`;
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  toast('Element copied to the AI chat. Say what you want changed.');
+}
+
+function openStylePanel(info) {
+  S.style = { info, changes: {} };
+  $('#styleTarget').textContent = `<${info.tag}> ${info.selector}`;
+  $('#styleList').replaceChildren(el('p', { className: 'muted', textContent: 'Loading…' }));
+  $('#stylePanel').hidden = false;
+  sendFrame({ cmd: 'getStyles', props: STYLE_PROPS });
+}
+
+function closeStylePanel() {
+  if (!S.style) return;
+  sendFrame({ cmd: 'resetStyles' });
+  S.style = null;
+  $('#stylePanel').hidden = true;
+}
+
+function toHex(v) {
+  const m = /^rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?\)$/.exec(v.trim());
+  if (!m || (m[4] !== undefined && +m[4] === 0)) return '#ffffff';
+  return `#${[m[1], m[2], m[3]].map((n) => Math.round(+n).toString(16).padStart(2, '0')).join('')}`;
+}
+
+function fillStylePanel(values) {
+  const st = S.style;
+  if (!st) return;
+  const rows = [];
+  for (const [group, props] of Object.entries(STYLE_GROUPS)) {
+    rows.push(el('h4', { textContent: group }));
+    for (const [prop, kind] of props) {
+      const cur = (values[prop] || '').trim();
+      let field;
+      if (Array.isArray(kind)) {
+        field = el('select', {}, ...(kind.includes(cur) ? kind : [cur, ...kind]).map((o) => el('option', { value: o, textContent: o })));
+        field.value = cur;
+      } else if (kind === 'color') {
+        field = el('input', { type: 'color', value: toHex(cur) });
+      } else {
+        field = el('input', { type: 'text', value: cur, spellcheck: false });
+      }
+      field.title = `${prop}: ${cur}`;
+      field.addEventListener(kind === 'color' || Array.isArray(kind) ? 'input' : 'change', () => {
+        st.changes[prop] = field.value;
+        field.classList.add('changed');
+        sendFrame({ cmd: 'setStyle', prop, value: field.value });
+      });
+      rows.push(el('div', { className: 'style-row' }, el('label', { textContent: prop, title: prop }), field));
+    }
+  }
+  $('#styleList').replaceChildren(...rows);
+}
+
+function setupContextMenu() {
+  $('#styleClose').onclick = () => closeStylePanel();
+  $('#styleReset').onclick = () => {
+    if (!S.style) return;
+    S.style.changes = {};
+    sendFrame({ cmd: 'resetStyles' });
+    sendFrame({ cmd: 'getStyles', props: STYLE_PROPS });
+  };
+  $('#styleAsk').onclick = () => {
+    const st = S.style;
+    if (!st) return;
+    const css = Object.entries(st.changes).map(([p, v]) => `  ${p}: ${v};`).join('\n');
+    if (!css) { toast('Change a style first'); return; }
+    if (!S.me.ai || !S.project.can_edit) { toast('AI is not available here', 'error'); return; }
+    const input = $('#aiInput');
+    input.value = `Make these style changes permanent in the project's CSS for this element (${st.info.selector}):\n`
+      + `\`\`\`css\n${st.info.selector} {\n${css}\n}\n\`\`\`\nElement:\n\`\`\`html\n${st.info.html}\n\`\`\`\n`;
+    input.focus();
+    toast('Style changes copied to the AI chat. Press Enter to send.');
+  };
+  document.addEventListener('pointerdown', (e) => { if (S.ctx && !S.ctx.contains(e.target)) hideCtxMenu(); }, true);
+  addEventListener('blur', hideCtxMenu);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') hideCtxMenu(); });
 }
 
 function loadPreview(sub = S.framePath) {
