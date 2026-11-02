@@ -44,6 +44,11 @@ async function setupBlocks() {
     $('#bmCancel').onclick = () => $('#blockModal').close();
     $('#bmSave').onclick = saveBlockForm;
     renderPalette();
+    // The preview's "Edit" buttons ask us to open a block's form.
+    addEventListener('message', (e) => {
+      if (e.source !== $('#frame').contentWindow || e.data?.type !== 'gtac-edit-block' || S.tv) return;
+      editBlock(e.data.index);
+    });
   } catch (e) {
     console.warn('Blocks panel not available:', e);
   }
