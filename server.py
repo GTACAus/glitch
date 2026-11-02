@@ -51,10 +51,11 @@ TRASH = DATA / "trash"
 PREVIEW_HOST = os.environ.get("GLITCH_PREVIEW_HOST", "").lower().strip(".")
 PUBLIC_URL = os.environ.get("GLITCH_URL", "http://localhost:8090").rstrip("/")
 
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GLITCH_AI_MODEL", "gemini-3.1-pro-preview")
+# The AI goes through OpenRouter, so any model it lists works (e.g. "openai/gpt-4o").
+AI_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+AI_MODEL = os.environ.get("GLITCH_AI_MODEL", "openai/gpt-4o")
 # "Suggestions for you!" uses a quicker, cheaper model so the modal opens fast.
-IDEAS_MODEL = os.environ.get("GLITCH_IDEAS_MODEL", "gemini-3.8-flash")
+IDEAS_MODEL = os.environ.get("GLITCH_IDEAS_MODEL", "openai/gpt-4o-mini")
 # Who may use the AI (it costs money per request): names separated by commas or spaces, in .env.
 # Unset or "*" means everyone, which suits a local checkout; set it on a shared server.
 AI_USERS = {u for u in re.split(r"[,\s]+", os.environ.get("GLITCH_AI_USERS", "*")) if u}
@@ -563,59 +564,74 @@ def ai_context(pdir, current, selection):
     return head
 
 
-def gemini(system, contents, schema, thinking=None, model=None):
-    """One Gemini call that must answer with JSON matching schema; returns the parsed object, plus "_model":
-    the model that actually served it, as Google reports it (models are unreliable about naming themselves).
-    thinking caps the model's thinking tokens (None leaves it to the model) to trade depth for speed."""
-    config = {"responseMimeType": "application/json", "responseSchema": schema}
-    if thinking is not None:
-        config["thinkingConfig"] = {"thinkingBudget": thinking}
+def json_schema(node):
+    """The schemas below use upper-case type names (OBJECT, STRING); JSON Schema wants lower-case, and strict
+    mode wants every property required and no extras."""
+    if isinstance(node, dict):
+        out = {k: json_schema(v) for k, v in node.items()}
+        if isinstance(out.get("type"), str):
+            out["type"] = out["type"].lower()
+        if out.get("type") == "object":
+            out["additionalProperties"] = False
+            out["required"] = list(out.get("properties", {}))
+        return out
+    if isinstance(node, list):
+        return [json_schema(v) for v in node]
+    return node
+
+
+def call_ai(system, messages, schema, model=None):
+    """One OpenRouter chat call that must answer with JSON matching schema; returns the parsed object, plus
+    "_model": the model that actually served it, as OpenRouter reports it (models are unreliable about naming
+    themselves). messages are [{"role": "user" | "assistant", "content": str}]."""
     payload = {
-        "systemInstruction": {"parts": [{"text": system}]},
-        "contents": contents,
-        "generationConfig": config,
+        "model": model or AI_MODEL,
+        "messages": [{"role": "system", "content": system}] + messages,
+        "response_format": {"type": "json_schema", "json_schema": {
+            "name": "answer", "strict": True, "schema": json_schema(schema)}},
     }
     req = urllib.request.Request(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{model or GEMINI_MODEL}:generateContent",
+        "https://openrouter.ai/api/v1/chat/completions",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {AI_KEY}",
+                 "HTTP-Referer": PUBLIC_URL, "X-Title": "glitch"},
     )
     try:
         with urllib.request.urlopen(req, timeout=180) as res:
             data = json.load(res)
     except urllib.error.HTTPError as e:
         try:
-            msg = json.load(e).get("error", {}).get("message", "")
+            err = json.load(e).get("error", {})
+            msg = err.get("message", "") if isinstance(err, dict) else str(err)
         except ValueError:
             msg = ""
         raise HTTPError(502, f"The AI service said no ({e.code}). {msg}".strip())
     except (urllib.error.URLError, TimeoutError) as e:
         raise HTTPError(502, f"Couldn't reach the AI service: {e}")
 
-    cand = (data.get("candidates") or [{}])[0]
-    text = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", []) if not p.get("thought"))
+    cand = (data.get("choices") or [{}])[0]
+    text = (cand.get("message") or {}).get("content") or ""
     try:
         out = json.loads(text)
     except ValueError:
-        reason = cand.get("finishReason") or "no answer"
+        reason = cand.get("finish_reason") or "no answer"
         raise HTTPError(502, f"The AI's answer was cut off or malformed ({reason}). Try a smaller request.")
     if not isinstance(out, dict):
         raise HTTPError(502, "The AI answered in an unexpected shape. Try again.")
-    out["_model"] = data.get("modelVersion") or model or GEMINI_MODEL
+    out["_model"] = data.get("model") or model or AI_MODEL
     return out
 
 
 def ask_ai(pdir, messages, current, selection):
-    """Send the conversation to Gemini; returns its reply and the changed files (diffable against disk)."""
+    """Send the conversation to the AI; returns its reply and the changed files (diffable against disk)."""
     msgs = [m for m in messages if m.get("role") in ("user", "model") and str(m.get("text", "")).strip()][-20:]
     if not msgs or msgs[-1]["role"] != "user":
         raise HTTPError(400, "Nothing to ask")
-    contents = [{"role": m["role"], "parts": [{"text": str(m["text"])[:20000]}]} for m in msgs[:-1]]
-    contents.append({"role": "user", "parts": [
-        {"text": ai_context(pdir, current, selection)},
-        {"text": "Request: " + str(msgs[-1]["text"])[:20000]},
-    ]})
-    out = gemini(AI_SYSTEM, contents, {
+    contents = [{"role": "assistant" if m["role"] == "model" else "user", "content": str(m["text"])[:20000]}
+                for m in msgs[:-1]]
+    contents.append({"role": "user", "content":
+                     ai_context(pdir, current, selection) + "\n\nRequest: " + str(msgs[-1]["text"])[:20000]})
+    out = call_ai(AI_SYSTEM, contents, {
         "type": "OBJECT",
         "properties": {
             "reply": {"type": "STRING"},
@@ -722,8 +738,8 @@ def ai_ideas(pdir, current):
         raise HTTPError(400, "Open a code file first, then ask for suggestions")
     text = full.read_text(errors="replace")[:AI_CONTEXT_CHARS]
     others = ", ".join(r for r in list_files(pdir) if r != rel) or "none"
-    out = gemini(IDEAS_SYSTEM, [{"role": "user", "parts": [
-        {"text": f"Other files in the project: {others}\n\n=== {rel} ===\n{text}"}]}], {
+    out = call_ai(IDEAS_SYSTEM, [{"role": "user", "content":
+        f"Other files in the project: {others}\n\n=== {rel} ===\n{text}"}], {
         "type": "OBJECT",
         "properties": {"ideas": {"type": "ARRAY", "items": {
             "type": "OBJECT",
@@ -732,14 +748,14 @@ def ai_ideas(pdir, current):
                 "title": {"type": "STRING"}, "why": {"type": "STRING"}, "prompt": {"type": "STRING"}},
             "required": ["kind", "title", "why", "prompt"]}}},
         "required": ["ideas"],
-    }, thinking=1024, model=IDEAS_MODEL)
+    }, model=IDEAS_MODEL)
     ideas = [i for i in out.get("ideas") or [] if i.get("kind") in IDEA_KINDS and i.get("prompt")]
     ideas.sort(key=lambda i: IDEA_KINDS.index(i["kind"]))
     return {"file": rel, "ideas": ideas[:6], "model": out["_model"]}
 
 
 def ai_allowed(user):
-    return bool(GEMINI_KEY) and user is not None and ("*" in AI_USERS or user["name"] in AI_USERS)
+    return bool(AI_KEY) and user is not None and ("*" in AI_USERS or user["name"] in AI_USERS)
 
 
 def build_info():
@@ -1076,8 +1092,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         if rest in (["ai"], ["ideas"]) and method == "POST":
             need_edit()
-            if not GEMINI_KEY:
-                raise HTTPError(503, "AI isn't set up on this server (no GEMINI_API_KEY)")
+            if not AI_KEY:
+                raise HTTPError(503, "AI isn't set up on this server (no OPENROUTER_API_KEY)")
             if not ai_allowed(user):
                 print(f"ai refused for {user['name']} (not in GLITCH_AI_USERS)", flush=True)
                 raise HTTPError(403, "AI isn't switched on for your account")
