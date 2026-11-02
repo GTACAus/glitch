@@ -1,0 +1,16 @@
+[Unit]
+Description=glitch live code editor
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/apps/glitch
+ExecStart=/usr/bin/python3 server.py serve
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=GLITCH_URL=https://glitch.dunc.app
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>glitch~nhance</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="editor-page">
+  <header class="topbar">
+    <a href="/" class="brand-pill" title="All projects"><span>glitch~nhance</span></a>
+    <span id="buildInfo" class="build-info hide-sm"></span>
+    <button id="projName" class="proj-name"></button>
+    <button id="tourBtn" class="btn small tour-btn" title="Show me around">? Tour</button>
+    <span id="owner" class="muted hide-sm"></span>
+    <span id="saveStatus" class="save-status"></span>
+    <button id="ideasBtn" class="ideas-link" hidden>✦ Suggestions for you!</button>
+    <div class="spacer"></div>
+    <button id="rewindBtn" class="btn" title="See and restore earlier versions">⟲ Rewind</button>
+    <button id="remixBtn" class="btn hide-sm" title="Make your own copy">⧉ Remix</button>
+    <a id="exportBtn" class="btn hide-sm" title="Download every file as a .zip">⤓ Export</a>
+    <button id="togglePreview" class="btn hide-sm">Hide preview</button>
+    <a id="openPreview" class="btn primary" target="_blank" rel="noopener">Open ↗</a>
+  </header>
+  <div id="readonly" class="readonly-banner" hidden>
+    <span>This is <b id="roOwner"></b>'s project, so you can look but not change it.</span>
+    <button id="roRemix" class="btn small primary">Remix to edit your own copy</button>
+  </div>
+
+  <main class="workspace" id="workspace">
+    <aside class="sidebar" id="sidebar">
+      <div id="filesPane">
+        <div class="pane-head">
+          <span>Files</span>
+          <span id="fileActions">
+            <button id="newFile" class="icon-btn" title="New file (use / for folders)">+</button>
+            <button id="uploadBtn" class="icon-btn" title="Upload files">⇪</button>
+          </span>
+        </div>
+        <ul id="tree" class="tree"></ul>
+        <div id="dropHint" class="drop-hint">Drop images or files here to upload</div>
+        <input type="file" id="uploadInput" multiple hidden>
+      </div>
+      <div id="historyPane" hidden>
+        <div class="pane-head"><span>Rewind</span><button id="closeHistory" class="icon-btn" title="Close">×</button></div>
+        <button id="checkpointBtn" class="btn small">★ Save a checkpoint</button>
+        <p class="hint">Every save is kept. Click a moment to see it in the preview. Use ↑ ↓ to scrub.</p>
+        <ol id="timeline" class="timeline" tabindex="0"></ol>
+      </div>
+      <div id="aiPane" class="ai-pane" hidden>
+        <div class="pane-head"><span>✦ Ask AI</span><button id="aiClear" class="icon-btn" title="Start a new chat">⟲</button></div>
+        <div id="aiLog" class="ai-log">
+          <p class="hint">Ask for a change, e.g. “add a dark mode toggle”. You'll see a diff before anything changes.</p>
+        </div>
+        <form id="aiForm" class="ai-form">
+          <textarea id="aiInput" rows="3" placeholder="Describe a change… (Enter sends, Shift+Enter for a new line)"></textarea>
+          <button id="aiSend" class="btn small primary" type="submit">Send</button>
+        </form>
+      </div>
+    </aside>
+
+    <section class="editor-col">
+      <div id="tvBanner" class="tv-banner" hidden>
+        <div class="tv-row">
+          <span class="tv-title" id="tvTitle"></span>
+          <span class="muted" id="tvMeta"></span>
+          <div class="spacer"></div>
+          <div class="seg" id="tvMode">
+            <button data-mode="step">What changed here</button>
+            <button data-mode="now">Compare with now</button>
+          </div>
+        </div>
+        <div class="tv-row" id="tvFiles"></div>
+        <div class="tv-row">
+          <button id="restoreFile" class="btn small"></button>
+          <button id="restoreAll" class="btn small primary">Restore everything to this moment</button>
+          <div class="spacer"></div>
+          <button id="exitTv" class="btn small">Back to now</button>
+        </div>
+      </div>
+      <div id="aiBanner" class="tv-banner ai-banner" hidden>
+        <div class="tv-row">
+          <span class="tv-title">✦ AI suggestion</span>
+          <span class="muted" id="aiMeta"></span>
+          <div class="spacer"></div>
+          <button id="aiDiscard" class="btn small">Discard</button>
+        </div>
+        <div class="tv-row" id="aiFiles"></div>
+        <div class="tv-row">
+          <button id="aiApplyFile" class="btn small"></button>
+          <button id="aiApplyAll" class="btn small primary">Apply all changes</button>
+          <div class="spacer"></div>
+          <button id="aiClose" class="btn small">Back to editor</button>
+        </div>
+      </div>
+      <div id="fileBar" class="file-bar"></div>
+      <div id="diffLabels" class="diff-labels" hidden><span id="diffLeft"></span><span id="diffRight"></span></div>
+      <div id="editor" class="editor"></div>
+      <div id="diff" class="editor" hidden></div>
+      <div id="binaryView" class="binary-view" hidden></div>
+    </section>
+
+    <div id="splitter" class="splitter"></div>
+
+    <section class="preview-col">
+      <div class="preview-bar">
+        <button id="reloadPreview" class="icon-btn" title="Reload">↻</button>
+        <span class="base" id="previewBase"></span>
+        <input id="previewPath" spellcheck="false" placeholder="index.html">
+      </div>
+      <iframe id="frame" title="Preview"></iframe>
+      <div class="logs" id="logs">
+        <div class="logs-head">
+          <button id="logsToggle" class="btn small">▸ Logs<span id="errCount" class="badge" hidden></span></button>
+          <div class="spacer"></div>
+          <button id="clearLogs" class="btn small">Clear</button>
+        </div>
+        <div id="logList" class="log-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="ideasModal" class="ideas-modal">
+    <div class="ideas-head">
+      <div>
+        <h2>✦ Suggestions for you</h2>
+        <p class="muted" id="ideasSub"></p>
+      </div>
+      <div class="spacer"></div>
+      <button id="ideasRefresh" class="btn small" type="button">↻ New ideas</button>
+      <button id="ideasClose" class="icon-btn" type="button" title="Close">×</button>
+    </div>
+    <div id="ideasBody" class="ideas-grid"></div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <script src="/static/build.js"></script>
+  <script src="/static/editor.js"></script>
+  <script src="/static/tour.js"></script>
+</body>
+</html>
