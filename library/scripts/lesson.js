@@ -51,8 +51,14 @@ const EDITOR_STYLE =
   ".gtac-editable:hover { outline-color: #7c5cff; }" +
   ".gtac-toolbar { position: absolute; top: -16px; right: 12px; z-index: 5; display: flex; gap: 2px; padding: 3px;" +
   " background: #7c5cff; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);" +
-  " opacity: 0; transition: opacity .15s; }" +
+  " opacity: .6; transition: opacity .15s; }" +
   ".gtac-editable:hover > .gtac-toolbar, .gtac-toolbar:focus-within { opacity: 1; }" +
+  ".gtac-hint { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 12px; margin: 0 0 18px;" +
+  " padding: 10px 14px; background: #ece7ff; color: #24212f; border: 2px solid #7c5cff; border-radius: 12px;" +
+  " font: 500 14px/1.4 system-ui, sans-serif; }" +
+  ".gtac-hint b { font-weight: 700; }" +
+  ".gtac-hint button { margin-left: auto; padding: 5px 12px; cursor: pointer; background: #7c5cff; color: #fff;" +
+  " border: 0; border-radius: 999px; font: 700 13px/1 system-ui, sans-serif; }" +
   ".gtac-toolbar button { padding: 5px 9px; cursor: pointer; background: transparent; color: #fff; border: 0;" +
   " border-radius: 999px; font: 700 13px/1 system-ui, sans-serif; }" +
   ".gtac-toolbar button:hover { background: rgba(255,255,255,.25); }" +
@@ -67,6 +73,25 @@ function enableBlockEditing() {
 
   const blocks = findBlockElements();
   const tell = function (message) { window.parent.postMessage(message, "*"); };
+
+  /* A one-time tip for first-time builders; "Got it" hides it for good in this browser. */
+  let tipSeen = false;
+  try { tipSeen = localStorage.getItem("gtac.tipSeen") === "1"; } catch (error) { /* the tip just shows each time */ }
+  if (!tipSeen && blocks.length) {
+    const tip = document.createElement("div");
+    tip.className = "gtac-hint";
+    tip.innerHTML = "<span><b>Building your lesson:</b> use the purple toolbar on each block to <b>✎ Edit</b> its words, " +
+      "move it (⋮⋮ drag or ↑ ↓) or delete it (✕). Add more with <b>＋ Add block</b> at the top.</span>";
+    const gotIt = document.createElement("button");
+    gotIt.type = "button";
+    gotIt.textContent = "Got it";
+    gotIt.addEventListener("click", function () {
+      tip.remove();
+      try { localStorage.setItem("gtac.tipSeen", "1"); } catch (error) { /* ignore */ }
+    });
+    tip.appendChild(gotIt);
+    document.body.insertBefore(tip, document.body.firstChild);
+  }
 
   function clearDropMarks() {
     blocks.forEach(function (b) { b.classList.remove("gtac-drop-before", "gtac-drop-after"); });
