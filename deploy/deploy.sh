@@ -1,23 +1,26 @@
 #!/bin/sh
-# Deploy to gtac: stamp build.json with the commit and time, copy the code over, restart the service.
-#   deploy/deploy.sh            (run from anywhere)
+# Deploy a branch to gtac: stamp build.json with the commit and time, copy the code over, restart the service.
+#   deploy/deploy.sh michael    -> https://glitch.dunc.app    (~/apps/glitch,      glitch.service,      port 8090)
+#   deploy/deploy.sh finn       -> https://code.gtac.edu.au   (~/apps/glitch-finn, glitch-finn.service, port 8091)
+# Ships what is committed on that branch (git archive), so local scratch files never go out.
 # Leaves the server's data/ and .env alone.
 set -e
 cd "$(dirname "$0")/.."
 HOST=${GLITCH_DEPLOY_HOST:-ubuntu@gtac}
+BRANCH=${1:?usage: deploy/deploy.sh michael|finn}
+case "$BRANCH" in
+  michael) DIR=apps/glitch;      SVC=glitch;      URL=https://glitch.dunc.app ;;
+  finn)    DIR=apps/glitch-finn; SVC=glitch-finn; URL=https://code.gtac.edu.au ;;
+  *) echo "unknown branch: $BRANCH" >&2; exit 1 ;;
+esac
 
-python3 - <<'PY'
-import json, subprocess, time
-git = lambda *a: subprocess.run(["git", *a], capture_output=True, text=True).stdout.strip()
-dirty = subprocess.run(["git", "diff", "--quiet", "HEAD"]).returncode != 0
-json.dump({
-    "commit": git("rev-parse", "--short", "HEAD") + ("+local" if dirty else ""),
-    "message": git("log", "-1", "--format=%s"),
-    "committed": int(git("log", "-1", "--format=%ct") or 0),
-    "deployed": int(time.time()),
-}, open("build.json", "w"))
-PY
+git rev-parse --verify -q "$BRANCH" >/dev/null || { echo "no local branch $BRANCH" >&2; exit 1; }
+SHA=$(git rev-parse --short "$BRANCH")
+MSG=$(git log -1 --format=%s "$BRANCH" | tr -d '"\')
+printf '{"commit": "%s", "message": "%s", "committed": %s, "deployed": %s}' \
+  "$SHA" "$MSG" "$(git log -1 --format=%ct "$BRANCH")" "$(date +%s)" > build.json
 
-rsync -az --exclude .git --exclude data --exclude .env --exclude __pycache__ --exclude .DS_Store ./ "$HOST:apps/glitch/"
-ssh "$HOST" 'sudo systemctl restart glitch && sleep 1 && systemctl is-active glitch'
-echo "Deployed $(python3 -c 'import json;b=json.load(open("build.json"));print(b["commit"])')"
+git archive "$BRANCH" | ssh "$HOST" "tar -xf - -C ~/$DIR"
+scp -q build.json "$HOST:$DIR/build.json"
+ssh "$HOST" "sudo systemctl restart $SVC && sleep 1 && systemctl is-active $SVC"
+echo "Deployed $SHA ($BRANCH) to $URL"
