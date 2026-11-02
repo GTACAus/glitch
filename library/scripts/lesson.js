@@ -63,6 +63,12 @@ const EDITOR_STYLE =
   " border-radius: 999px; font: 700 13px/1 system-ui, sans-serif; }" +
   ".gtac-toolbar button:hover { background: rgba(255,255,255,.25); }" +
   ".gtac-toolbar .gtac-handle { cursor: grab; letter-spacing: -2px; }" +
+  ".gtac-add { position: relative; display: flex; justify-content: center; align-items: center; height: 26px;" +
+  " opacity: .3; transition: opacity .15s; }" +
+  ".gtac-add::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed #7c5cff; }" +
+  ".gtac-add:hover, .gtac-add:focus-within { opacity: 1; }" +
+  ".gtac-add button { position: relative; padding: 4px 14px; cursor: pointer; background: #7c5cff; color: #fff; border: 0;" +
+  " border-radius: 999px; font: 700 12px/1 system-ui, sans-serif; }" +
   ".gtac-drop-before { box-shadow: 0 -6px 0 #7c5cff; }" +
   ".gtac-drop-after { box-shadow: 0 6px 0 #7c5cff; }";
 
@@ -96,6 +102,21 @@ function enableBlockEditing() {
   function clearDropMarks() {
     blocks.forEach(function (b) { b.classList.remove("gtac-drop-before", "gtac-drop-after"); });
   }
+
+  /* "＋ Add block here" lines before every block and after the last one. */
+  function addLine(position, before) {
+    const line = document.createElement("div");
+    line.className = "gtac-add";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "＋ Add block here";
+    button.addEventListener("click", function () { tell({ type: "gtac-add-block", at: position }); });
+    line.appendChild(button);
+    if (before) before.parentNode.insertBefore(line, before);
+    else blocks[blocks.length - 1].parentNode.insertBefore(line, blocks[blocks.length - 1].nextSibling);
+  }
+  blocks.forEach(function (block, index) { addLine(index, block); });
+  if (blocks.length) addLine(blocks.length, null);
 
   blocks.forEach(function (block, index) {
     block.classList.add("gtac-editable");

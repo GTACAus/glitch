@@ -37,24 +37,44 @@ async function setupBlocks() {
     if (!S.project.can_edit || !S.files.some((f) => f.path === 'index.html') || !blockDefs().intro) return;
     const text = await fetchText(fileUrl('index.html'));
     if (!text.includes(BLOCKS_END)) return;
-    $('#blocksBtn').hidden = false;
     $('#blocksBtn').onclick = () => toggleBlocks();
     $('#closeBlocks').onclick = () => toggleBlocks(false);
+    $('#bpClose').onclick = () => $('#blockPicker').close();
+    $('#codeToggle').hidden = false;
+    $('#codeToggle').onclick = () => setLessonView(!document.body.classList.contains('lesson-view'));
     $('#bmClose').onclick = () => $('#blockModal').close();
     $('#bmCancel').onclick = () => $('#blockModal').close();
     $('#bmSave').onclick = saveBlockForm;
-    renderPalette();
+    renderPalette($('#blockPalette'), (type) => addBlock(type));
+    renderPalette($('#bpBody'), (type) => {
+      $('#blockPicker').close();
+      addBlock(type, B.addAt);
+    });
     // The toolbar on each block in the preview asks us to edit, move or delete it.
     addEventListener('message', (e) => {
       const m = e.data;
       if (e.source !== $('#frame').contentWindow || S.tv || !m) return;
-      if (m.type === 'gtac-edit-block') editBlock(m.index);
+      if (m.type === 'gtac-add-block') { B.addAt = m.at; $('#blockPicker').showModal(); }
+      else if (m.type === 'gtac-edit-block') editBlock(m.index);
       else if (m.type === 'gtac-move-block') moveBlockTo(m.from, m.to);
       else if (m.type === 'gtac-delete-block') deleteBlock(m.index);
     });
+    let showCode = false;
+    try { showCode = localStorage.getItem('glitch.showCode') === '1'; } catch { /* default to the lesson view */ }
+    setLessonView(!showCode);
   } catch (e) {
     console.warn('Blocks panel not available:', e);
   }
+}
+
+// Lesson view: blocks on the left, a big preview, no code. The other view is the full editor.
+async function setLessonView(on) {
+  document.body.classList.toggle('lesson-view', on);
+  $('#codeToggle').textContent = on ? '</> Show code' : '← Back to lesson view';
+  $('#blocksBtn').hidden = on;
+  $('#closeBlocks').hidden = on;
+  try { localStorage.setItem('glitch.showCode', on ? '0' : '1'); } catch { /* not remembered */ }
+  await toggleBlocks(on);
 }
 
 async function toggleBlocks(open = $('#blocksPane').hidden) {
@@ -90,11 +110,11 @@ async function setIndexText(next) {
 
 // ------------------------------------------------------------------ panel
 
-function renderPalette() {
-  $('#blockPalette').replaceChildren(...Object.entries(blockDefs()).map(([type, def]) => {
+function renderPalette(container, onPick) {
+  container.replaceChildren(...Object.entries(blockDefs()).map(([type, def]) => {
     const b = el('button', { className: 'block-card', type: 'button' },
       el('b', { textContent: def.title }), el('span', { textContent: def.description }));
-    b.onclick = () => addBlock(type);
+    b.onclick = () => onPick(type);
     return b;
   }));
 }
@@ -131,19 +151,27 @@ function renderBlockList() {
 
 // ------------------------------------------------------------------ actions
 
-async function addBlock(type) {
+// Add a block before block number `position`, or at the end when no position is given.
+async function addBlock(type, position) {
   const def = blockDefs()[type];
   const model = await blocksModel();
   const text = model.getValue();
-  const at = text.indexOf(BLOCKS_END);
-  if (at < 0) return toast('This page has no place for blocks', 'error');
-  const lineStart = text.lastIndexOf('\n', at) + 1;
-  const indent = /^[ \t]*$/.test(text.slice(lineStart, at)) ? text.slice(lineStart, at) : '';
+  const existing = findBlocks(text);
+  let lineStart, indent;
+  if (position != null && existing[position]) {
+    lineStart = existing[position].start;
+    indent = existing[position].indent;
+  } else {
+    position = existing.length;
+    const marker = text.indexOf(BLOCKS_END);
+    if (marker < 0) return toast('This page has no place for blocks', 'error');
+    lineStart = text.lastIndexOf('\n', marker) + 1;
+    indent = /^[ \t]*$/.test(text.slice(lineStart, marker)) ? text.slice(lineStart, marker) : '';
+  }
   const block = wrapBlock(type, def.render(def.defaults()), indent);
   await setIndexText(`${text.slice(0, lineStart)}${block}\n\n${text.slice(lineStart)}`);
-  const index = findBlocks(S.models.get('index.html').getValue()).length - 1;
   toast(`${def.title} added ✓`);
-  editBlock(index);
+  editBlock(position);
 }
 
 const moveBlock = (i, by) => moveBlockTo(i, i + by);

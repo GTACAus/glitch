@@ -20,6 +20,7 @@
     <span id="saveStatus" class="save-status"></span>
     <button id="ideasBtn" class="ideas-link" hidden>✦ Suggestions for you!</button>
     <button id="blocksBtn" class="btn primary" title="Add activities and sections to your lesson" hidden>＋ Add block</button>
+    <button id="codeToggle" class="btn" title="Switch between the simple lesson view and the code" hidden>&lt;/&gt; Show code</button>
     <div class="spacer"></div>
     <button id="rewindBtn" class="btn" title="See and restore earlier versions">⟲ Rewind</button>
     <button id="remixBtn" class="btn hide-sm" title="Make your own copy">⧉ Remix</button>
@@ -53,8 +54,8 @@
         <ol id="timeline" class="timeline" tabindex="0"></ol>
       </div>
       <div id="blocksPane" hidden>
-        <div class="pane-head"><span>Blocks</span><button id="closeBlocks" class="icon-btn" title="Close">×</button></div>
-        <p class="hint">Click a block to add it to your lesson.</p>
+        <div class="pane-head"><span>Add to your lesson</span><button id="closeBlocks" class="icon-btn" title="Close">×</button></div>
+        <p class="hint">Click a block to add it at the end, or use the ＋ lines in the preview to add one between blocks.</p>
         <div id="blockPalette" class="block-palette"></div>
         <div class="pane-head"><span>On this page</span></div>
         <ol id="blockList" class="block-list"></ol>
@@ -143,6 +144,11 @@
       <button id="ideasClose" class="icon-btn" type="button" title="Close">×</button>
     </div>
     <div id="ideasBody" class="ideas-grid"></div>
+  </dialog>
+
+  <dialog id="blockPicker" class="block-modal">
+    <div class="bm-head"><h2>Add a block</h2><div class="spacer"></div><button id="bpClose" class="icon-btn" type="button" title="Close">×</button></div>
+    <div id="bpBody" class="bm-body block-palette"></div>
   </dialog>
 
   <dialog id="blockModal" class="block-modal">

@@ -592,6 +592,8 @@ async function toggleHistory(open = $('#historyPane').hidden) {
   } else if (S.tv) {
     exitTimeTravel();
   }
+  // Lesson view keeps the blocks panel on the left instead of the file list.
+  if (!open && document.body.classList.contains('lesson-view')) toggleBlocks(true);
 }
 
 async function loadHistory() {
