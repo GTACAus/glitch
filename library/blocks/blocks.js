@@ -147,6 +147,83 @@
       }
     },
 
+    dragwords: {
+      title: "Drag and drop words",
+      description: "Students drag words from a word bank into the blanks in sentences",
+      fields: [
+        { key: "heading", label: "Heading", type: "text" },
+        { key: "instruction", label: "Instruction for students", type: "longtext" },
+        { key: "sentences", label: "Sentences (put [square brackets] around each missing word)", type: "list", addLabel: "+ Add a sentence" },
+        { key: "extras", label: "Extra words that don't belong (optional)", type: "list", addLabel: "+ Add an extra word" }
+      ],
+      defaults: function () {
+        return {
+          heading: "Fill in the blanks",
+          instruction: "Drag the correct words into the blanks to complete each sentence.",
+          sentences: [
+            "Plants make food using [sunlight], [water] and carbon dioxide.",
+            "Roots take up [water] and nutrients from the [soil]."
+          ],
+          extras: ["metal"]
+        };
+      },
+      render: function (v) {
+        var words = [];
+        function wordId(word) {
+          var id = word.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "word";
+          if (!words.some(function (w) { return w.id === id; })) words.push({ id: id, text: word });
+          return id;
+        }
+        var cards = v.sentences.map(function (sentence, si) {
+          var n = 0;
+          var html = sentence.split(/(\[[^\]]+\])/).map(function (part) {
+            var m = part.match(/^\[([^\]]+)\]$/);
+            if (!m) return esc(part);
+            return '<span data-dd-slot="s' + si + "-" + (n++) + '" data-dd-answer="' + wordId(m[1].trim()) + '"></span>';
+          }).join("");
+          return '    <div class="sentence-card">' + html + "</div>\n";
+        });
+        v.extras.forEach(function (extra) { if (extra.trim()) wordId(extra.trim()); });
+        return '<section class="section">\n' +
+          '  <h2 class="section-title">' + esc(v.heading) + '</h2>\n' +
+          '  <div class="diagram-box diagram-activity">\n' +
+          '    <p class="activity-instruction">' + esc(v.instruction) + '</p>\n' +
+          '  </div>\n' +
+          '  <div class="dd-words" data-activity data-activity-type="drag-drop" data-dd-strict>\n' +
+          cards.join("") +
+          '    <div data-dd-tray data-dd-tray-heading="Word bank" data-shuffle>\n' +
+          words.map(function (w) {
+            return '      <span class="word-chip" data-dd-item="' + w.id + '" data-dd-reusable>' + esc(w.text) + '</span>\n';
+          }).join("") +
+          '    </div>\n' +
+          '    <p class="dd-done">Well done! 🎉</p>\n' +
+          '  </div>\n' +
+          '</section>';
+      },
+      read: function (root) {
+        var itemText = {};
+        var used = {};
+        Array.prototype.forEach.call(root.querySelectorAll("[data-dd-item]"), function (item) {
+          itemText[item.dataset.ddItem] = item.textContent.trim();
+        });
+        var sentences = Array.prototype.map.call(root.querySelectorAll(".sentence-card"), function (card) {
+          return Array.prototype.map.call(card.childNodes, function (node) {
+            if (node.nodeType === 3) return node.textContent;
+            var id = node.dataset && node.dataset.ddAnswer;
+            if (!id) return "";
+            used[id] = true;
+            return "[" + (itemText[id] || id) + "]";
+          }).join("");
+        });
+        return {
+          heading: textOf(root, ".section-title"),
+          instruction: textOf(root, ".activity-instruction"),
+          sentences: sentences,
+          extras: Object.keys(itemText).filter(function (id) { return !used[id]; }).map(function (id) { return itemText[id]; })
+        };
+      }
+    },
+
     mcq: {
       title: "Multiple choice",
       description: "Questions with answer buttons that tell students if they are right",

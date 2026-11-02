@@ -12,12 +12,26 @@
 
 import { InputResponseActivity } from "./activities/input-response-activity.js";
 import { MultipleChoiceActivity } from "./activities/multiple-choice-activity.js";
+import { DragDropActivity } from "./activities/drag-drop-activity.js";
 import { createNextButtons, initSectionActivitiesIn } from "./activities/activity-sections.js";
 
 const ACTIVITY_TYPES = {
   "input-response": InputResponseActivity,
-  "multiple-choice": MultipleChoiceActivity
+  "multiple-choice": MultipleChoiceActivity,
+  "drag-drop": DragDropActivity
 };
+
+/* A tray marked data-shuffle has its items put in a random order, so the order never gives the answers away. */
+function shuffleTrays() {
+  document.querySelectorAll("[data-dd-tray][data-shuffle]").forEach(function (tray) {
+    const items = Array.prototype.slice.call(tray.children);
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    items.forEach(function (item) { tray.appendChild(item); });
+  });
+}
 
 /* Blocks are found by the <!-- gtac:block --> comments around them, in page order. */
 function findBlockElements() {
@@ -110,9 +124,10 @@ function enableBlockEditing() {
 }
 
 function startLesson() {
+  shuffleTrays();
   document.querySelectorAll("[data-activity-type]").forEach(function (root) {
     const Type = ACTIVITY_TYPES[root.dataset.activityType];
-    if (Type) new Type(root);
+    if (Type) new Type(root, { strictSlots: root.hasAttribute("data-dd-strict") });
     else console.warn("Unknown activity type:", root.dataset.activityType);
   });
 

@@ -152,3 +152,239 @@
 .feedback-incorrect::before {
   content: "🤔 ";
 }
+
+/* ---------- Drag and drop (drag-drop-activity.js) ---------- */
+/* Base behaviour copied from PRIM7 drag_and_drop_base.css; the word-bank look is below. */
+:root {
+  --dd-accent: #39d3ff;
+  --dd-reject: #d64545;
+  --dd-slot-hover-bg: rgba(57, 211, 255, 0.28);
+  --dd-slot-hover-scale: 1.03;
+  --dd-item-dragging-opacity: 0.3;
+  --dd-selected-ring: 0 0 0 4px rgba(252, 255, 57, 0.596);
+  --dd-selected-background: inherit;
+  --dd-ghost-scale: 1.08;
+  --dd-ghost-shadow: 0 10px 18px rgba(0, 0, 0, 0.3);
+  --dd-ghost-z: 10000;
+  --dd-ghost-bounce-amount: 3px;
+  --dd-ghost-bounce-time: 0.3s;
+}
+
+/* ---------- slots ---------- */
+
+:where([data-dd-slot]) {
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+:where([data-dd-slot].dd-hover),
+:where(.dd-has-selection [data-dd-slot]:not(.dd-filled):hover) {
+  border-color: var(--dd-accent);
+  background: var(--dd-slot-hover-bg);
+}
+
+:where([data-dd-slot].dd-hover) {
+  transform: scale(var(--dd-slot-hover-scale));
+}
+
+:where([data-dd-slot].dd-filled) {
+  border-style: solid;
+}
+
+:where([data-dd-slot]:focus-visible),
+:where([data-dd-item]:focus-visible) {
+  outline: 3px solid var(--dd-accent);
+  outline-offset: 3px;
+}
+
+/* strictSlots: brief shake on a slot that just refused a wrong item. */
+:where([data-dd-slot].dd-rejected) {
+  border-color: var(--dd-reject);
+  animation: dd-reject-shake 0.4s ease;
+}
+
+@keyframes dd-reject-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+/* ---------- items ---------- */
+
+:where([data-dd-item]) {
+  cursor: grab;
+  touch-action: none; /* lets touch drags move the item instead of scrolling the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:where([data-dd-item] img) {
+  -webkit-user-drag: none; /* stops the browser's native image drag cancelling the pointer drag */
+  user-select: none;
+}
+
+:where([data-dd-item].dd-selected) {
+  box-shadow: var(--dd-selected-ring) !important;
+  background: var(--dd-selected-background) !important;
+}
+
+:where([data-dd-item].dd-dragging) {
+  opacity: var(--dd-item-dragging-opacity);
+}
+
+:where(.dd-is-dragging [data-dd-item]) {
+  cursor: grabbing;
+}
+
+/* Heading generated from the tray's data-dd-tray-heading attribute. */
+:where(.dd-tray-heading) {
+  flex-basis: 100%; /* own row when the tray is a wrapping flex row */
+  margin: 0;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* ---------- ghost ---------- */
+/* The script only sets left/top/width/height, so position and pointer-events
+   are functional, not cosmetic: !important stops class rules such as
+   .general-button { position: relative } from putting the ghost back in flow. */
+
+.dd-ghost {
+  position: fixed !important;
+  pointer-events: none !important;
+  animation: none;
+}
+
+:where(.dd-ghost) {
+  z-index: var(--dd-ghost-z);
+  margin: 0;
+  cursor: grabbing;
+  transform: scale(var(--dd-ghost-scale));
+  box-shadow: var(--dd-ghost-shadow);
+}
+
+/* Ghost bobs while over a slot. Deliberately NOT :where(): it must outrank
+   `.dd-ghost { animation: none }` above (which exists to cancel button
+   animations like .general-button's pop-in), or it never plays. Animates the
+   individual `translate` property so the ghost's scale/rotate transform is kept. */
+.dd-ghost.dd-ghost-hover {
+  animation: dd-ghost-bounce var(--dd-ghost-bounce-time) ease-in-out infinite alternate;
+}
+
+@keyframes dd-ghost-bounce {
+  from { translate: 0 calc(-1 * var(--dd-ghost-bounce-amount)); }
+  to { translate: 0 var(--dd-ghost-bounce-amount); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where([data-dd-slot]),
+  :where([data-dd-item]) {
+    transition: none;
+  }
+
+  :where([data-dd-slot].dd-rejected),
+  .dd-ghost.dd-ghost-hover {
+    animation: none;
+  }
+}
+
+/* ---------- Drag and drop words: sentences with blanks and a word bank ---------- */
+
+.dd-words {
+  --dd-accent: var(--green);
+  --dd-slot-hover-bg: var(--soft-green);
+  --dd-reject: var(--orange);
+  display: grid;
+  gap: 18px;
+}
+
+.dd-words .sentence-card {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+
+  padding: 6px 16px;
+
+  background: white;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+
+  line-height: 2.4;
+}
+
+.dd-words [data-dd-slot] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 130px;
+  height: 38px;
+  margin: 0 4px;
+
+  background: var(--soft-yellow);
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+
+  vertical-align: middle;
+}
+
+.dd-words [data-dd-slot].dd-filled {
+  background: var(--soft-green);
+  border: 2px solid var(--green);
+}
+
+.dd-words [data-dd-slot].dd-rejected {
+  background: var(--soft-orange);
+}
+
+.dd-words [data-dd-tray] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 14px;
+
+  background: var(--soft-blue);
+  border: 3px solid var(--line);
+  border-radius: 16px;
+}
+
+.word-chip {
+  display: inline-block;
+  padding: 8px 16px;
+
+  background: var(--purple);
+  color: white;
+
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--line);
+
+  font-weight: 700;
+}
+
+.dd-words [data-dd-item].dd-placed {
+  padding: 2px 10px;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  box-shadow: none;
+}
+
+.dd-words .dd-done {
+  display: none;
+  margin: 0;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  animation: pop-fade-in 0.5s ease;
+}
+
+.dd-words[data-activity-complete="true"] .dd-done {
+  display: block;
+}
