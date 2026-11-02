@@ -1,0 +1,154 @@
+/* ==================================================
+   ACTIVITY STYLES
+   The look of the activities in scripts/activities/, built on the
+   colours and shapes in build_style.css. Load it after build_style.css.
+   ================================================== */
+
+/* ---------- Typed answers (input-response-activity.js) ---------- */
+
+[data-tr-group] input[type="text"],
+[data-tr-group] input[type="number"],
+[data-tr-group] textarea {
+  padding: 10px 14px;
+
+  background: white;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+[data-tr-group] input:disabled {
+  opacity: 0.5;
+}
+
+[data-tr-list] {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.ir-answer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 9px 14px;
+
+  background: var(--soft-yellow);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  animation: pop-fade-in 0.5s ease;
+}
+
+.ir-answer.ir-correct {
+  background: var(--soft-green);
+}
+
+.ir-answer.ir-incorrect {
+  background: var(--soft-orange);
+}
+
+/* ---------- Multiple choice (multiple-choice-activity.js) ---------- */
+
+[data-mc-question] {
+  margin-bottom: 26px;
+}
+
+[data-mc-question] > p,
+[data-mc-question] > h3 {
+  margin: 0 0 14px;
+
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+[data-mc-choices] {
+  display: grid;
+  gap: 12px;
+}
+
+[data-mc-choice] {
+  padding: 14px 18px;
+
+  background: var(--paper);
+  color: var(--text);
+
+  border: 3px solid var(--line);
+  border-radius: 14px;
+
+  box-shadow: 0 4px 0 var(--line);
+
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+[data-mc-choice]:hover {
+  background: var(--soft-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--line);
+}
+
+[data-mc-choice].selected-answer {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+[data-mc-choice].correct-answer {
+  background: var(--soft-green);
+  border-color: var(--green);
+}
+
+[data-mc-choice].incorrect-answer {
+  background: var(--soft-orange);
+  border-color: var(--orange);
+  animation: predictionCheckBuzz 0.2s ease;
+}
+
+[data-mc-feedback],
+[data-mc-choice-feedback] {
+  margin-top: 10px;
+}
+
+.feedback-correct,
+.feedback-incorrect {
+  padding: 12px 16px;
+
+  border: 2px solid var(--line);
+  border-radius: 12px;
+
+  line-height: 1.5;
+  animation: pop-fade-in 0.5s ease;
+}
+
+.feedback-correct {
+  background: var(--soft-green);
+}
+
+.feedback-incorrect {
+  background: var(--soft-orange);
+}
+
+.feedback-correct::before {
+  content: "✅ ";
+}
+
+.feedback-incorrect::before {
+  content: "🤔 ";
+}

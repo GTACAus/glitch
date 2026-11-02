@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My quiz</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- The shared GTAC look and behaviour. Leave these lines as they are. -->
+  <link href="/_glitch/lib/styles/build_style.css" rel="stylesheet">
+  <link href="/_glitch/lib/styles/activities.css" rel="stylesheet">
+  <script src="/_glitch/lib/scripts/common_functions.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+
+<body>
+  <main class="page">
+
+    <header class="lesson-heading">
+      <!-- EDIT: the title and a short summary -->
+      <span class="lesson-label">Quiz</span>
+      <h1>Your quiz title</h1>
+      <p class="lesson-summary">Choose the best answer for each question.</p>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">Questions</h2>
+
+      <!--
+        The quiz. Each question is one data-mc-question block.
+        data-mc-answer names the RIGHT choice (it must match that button's data-mc-choice).
+        To add a question, copy a whole data-mc-question block. To add an answer, copy a <button> line.
+      -->
+      <div id="quiz" data-activity>
+
+        <div data-mc-question data-mc-answer="b">
+          <p>Question 1: write your question here?</p>
+          <div data-mc-choices>
+            <button type="button" data-mc-choice="a">First answer</button>
+            <button type="button" data-mc-choice="b">Second answer (this is the right one)</button>
+            <button type="button" data-mc-choice="c">Third answer</button>
+          </div>
+          <!-- EDIT: what students are told after they pick -->
+          <div data-mc-feedback
+               data-correct-text="Yes! Explain why this is right."
+               data-incorrect-text="Not quite. Give a hint and let them try again."
+               hidden></div>
+        </div>
+
+        <div data-mc-question data-mc-answer="a">
+          <p>Question 2: write your next question here?</p>
+          <div data-mc-choices>
+            <button type="button" data-mc-choice="a">First answer (this is the right one)</button>
+            <button type="button" data-mc-choice="b">Second answer</button>
+          </div>
+          <div data-mc-feedback
+               data-correct-text="Yes! Explain why this is right."
+               data-incorrect-text="Not quite. Give a hint and let them try again."
+               hidden></div>
+        </div>
+
+      </div>
+
+      <p class="completed-note" style="display: block;">Answer every question correctly to finish.</p>
+    </section>
+
+  </main>
+</body>
+</html>
