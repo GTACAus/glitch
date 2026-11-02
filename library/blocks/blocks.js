@@ -224,6 +224,78 @@
       }
     },
 
+    labelpicture: {
+      title: "Label a picture",
+      description: "Students drag labels onto the right spots on a picture",
+      fields: [
+        { key: "heading", label: "Heading", type: "text" },
+        { key: "instruction", label: "Instruction for students", type: "longtext" },
+        { key: "picture", label: "Picture and labels", type: "imagelabels" }
+      ],
+      defaults: function () {
+        return {
+          heading: "Label the plant",
+          instruction: "Drag each label onto the correct part of the plant.",
+          picture: {
+            image: "/_glitch/lib/images/sample-flower.svg",
+            alt: "A flowering plant growing in soil",
+            labels: [
+              { text: "Flower", x: 80, y: 20 },
+              { text: "Leaf", x: 84, y: 52 },
+              { text: "Stem", x: 16, y: 38 },
+              { text: "Roots", x: 78, y: 88 }
+            ]
+          }
+        };
+      },
+      render: function (v) {
+        var p = v.picture;
+        return '<section class="section">\n' +
+          '  <h2 class="section-title">' + esc(v.heading) + '</h2>\n' +
+          '  <div class="diagram-box diagram-activity">\n' +
+          '    <p class="activity-instruction">' + esc(v.instruction) + '</p>\n' +
+          '  </div>\n' +
+          '  <div class="dd-label" data-activity data-activity-type="drag-drop" data-dd-strict>\n' +
+          '    <div class="dd-image">\n' +
+          '      <img src="' + esc(p.image) + '" alt="' + esc(p.alt) + '">\n' +
+          p.labels.map(function (l, i) {
+            return '      <div data-dd-slot="l' + i + '" data-dd-answer="l' + i + '" style="left: ' +
+              Math.round(l.x * 10) / 10 + '%; top: ' + Math.round(l.y * 10) / 10 + '%;"></div>\n';
+          }).join("") +
+          '    </div>\n' +
+          '    <div data-dd-tray data-dd-tray-heading="Labels" data-shuffle>\n' +
+          p.labels.map(function (l, i) {
+            return '      <span class="word-chip" data-dd-item="l' + i + '">' + esc(l.text) + '</span>\n';
+          }).join("") +
+          '    </div>\n' +
+          '    <p class="dd-done">Well done! 🎉</p>\n' +
+          '  </div>\n' +
+          '</section>';
+      },
+      read: function (root) {
+        var itemText = {};
+        Array.prototype.forEach.call(root.querySelectorAll("[data-dd-item]"), function (item) {
+          itemText[item.dataset.ddItem] = item.textContent.trim();
+        });
+        var img = root.querySelector(".dd-image img");
+        return {
+          heading: textOf(root, ".section-title"),
+          instruction: textOf(root, ".activity-instruction"),
+          picture: {
+            image: img ? img.getAttribute("src") || "" : "",
+            alt: img ? img.getAttribute("alt") || "" : "",
+            labels: Array.prototype.map.call(root.querySelectorAll("[data-dd-slot]"), function (slot) {
+              return {
+                text: itemText[slot.dataset.ddAnswer] || "",
+                x: parseFloat(slot.style.left) || 50,
+                y: parseFloat(slot.style.top) || 50
+              };
+            })
+          }
+        };
+      }
+    },
+
     mcq: {
       title: "Multiple choice",
       description: "Questions with answer buttons that tell students if they are right",

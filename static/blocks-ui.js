@@ -274,6 +274,8 @@ function fieldEl(field, obj) {
     const add = el('button', { className: 'btn small', type: 'button', textContent: '+ Add an answer' });
     add.onclick = () => { obj[field.key].push({ text: '', correct: false }); draw(); };
     wrap.append(rows, add);
+  } else if (field.type === 'imagelabels') {
+    wrap.append(imageLabelsEl(obj[field.key]));
   } else if (field.type === 'group') {
     const cards = el('div', { className: 'bf-cards' });
     const draw = () => cards.replaceChildren(...obj[field.key].map((item, i) => {
@@ -293,4 +295,104 @@ function fieldEl(field, obj) {
     wrap.append(cards, add);
   }
   return wrap;
+}
+
+// ------------------------------------------------------------------ picture labels field
+
+// Pictures in the project are shown from the project's files; /_glitch/... and http(s) links are used as they are.
+const pictureSrc = (path) => (/^(\/|https?:)/.test(path) ? path : fileUrl(path));
+const SAMPLE_PICTURE = '/_glitch/lib/images/sample-flower.svg';
+const imageFiles = () => S.files.filter((f) => IMAGE_EXT.has(ext(f.path)) && f.path !== 'favicon.ico');
+
+// Choose or upload a picture, then click on it to place each label; drag a marker to move it.
+function imageLabelsEl(pic) {
+  const root = el('div', { className: 'il' });
+
+  const select = el('select', { className: 'il-select' });
+  const fillSelect = () => {
+    const options = [el('option', { value: SAMPLE_PICTURE, textContent: 'Sample picture (a plant)' })];
+    imageFiles().forEach((f) => options.push(el('option', { value: f.path, textContent: f.path })));
+    if (!options.some((o) => o.value === pic.image)) options.unshift(el('option', { value: pic.image, textContent: pic.image || 'Choose a picture…' }));
+    select.replaceChildren(...options);
+    select.value = pic.image;
+  };
+  const fileInput = el('input', { type: 'file', accept: 'image/*', hidden: true });
+  const uploadBtn = el('button', { className: 'btn small', type: 'button', textContent: '⇪ Upload a picture' });
+  uploadBtn.onclick = () => fileInput.click();
+  fileInput.onchange = async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const path = `images/${cleanPath(file.name).split('/').pop().replace(/[^\w.-]+/g, '-')}`;
+      await api('PUT', fileUrl(path), await file.arrayBuffer());
+      await refreshFiles();
+      pic.image = path;
+      pic.alt = pic.alt && !pic.alt.startsWith('A flowering plant') ? pic.alt : file.name.replace(/\.[^.]+$/, '');
+      altInput.value = pic.alt;
+      fillSelect();
+      draw();
+      toast('Picture uploaded ✓');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+  select.onchange = () => { pic.image = select.value; draw(); };
+  fillSelect();
+
+  const altInput = el('input', { type: 'text', value: pic.alt, placeholder: 'Describe the picture (for screen readers)' });
+  altInput.oninput = () => { pic.alt = altInput.value; };
+
+  const stage = el('div', { className: 'il-stage' });
+  const img = el('img', { draggable: false });
+  const rows = el('div', { className: 'bf-rows' });
+  stage.append(img);
+
+  // Click an empty part of the picture to add a label there.
+  stage.onclick = (e) => {
+    if (e.target.closest('.il-marker')) return;
+    const box = img.getBoundingClientRect();
+    pic.labels.push({
+      text: `Label ${pic.labels.length + 1}`,
+      x: Math.min(Math.max(((e.clientX - box.left) / box.width) * 100, 0), 100),
+      y: Math.min(Math.max(((e.clientY - box.top) / box.height) * 100, 0), 100),
+    });
+    draw();
+  };
+
+  function draw() {
+    img.src = pictureSrc(pic.image);
+    img.alt = pic.alt;
+    stage.querySelectorAll('.il-marker').forEach((m) => m.remove());
+    pic.labels.forEach((label, i) => {
+      const marker = el('div', { className: 'il-marker', textContent: String(i + 1), title: label.text });
+      marker.style.left = `${label.x}%`;
+      marker.style.top = `${label.y}%`;
+      marker.onpointerdown = (e) => {
+        e.preventDefault();
+        marker.setPointerCapture(e.pointerId);
+        marker.onpointermove = (ev) => {
+          const box = img.getBoundingClientRect();
+          label.x = Math.min(Math.max(((ev.clientX - box.left) / box.width) * 100, 0), 100);
+          label.y = Math.min(Math.max(((ev.clientY - box.top) / box.height) * 100, 0), 100);
+          marker.style.left = `${label.x}%`;
+          marker.style.top = `${label.y}%`;
+        };
+        marker.onpointerup = () => { marker.onpointermove = null; };
+      };
+      stage.append(marker);
+    });
+    rows.replaceChildren(...pic.labels.map((label, i) => {
+      const input = el('input', { type: 'text', value: label.text });
+      input.oninput = () => { label.text = input.value; };
+      const remove = el('button', { className: 'icon-btn', type: 'button', textContent: '✕', title: 'Remove this label' });
+      remove.onclick = () => { pic.labels.splice(i, 1); draw(); };
+      return el('div', { className: 'bf-row' }, el('span', { className: 'il-num', textContent: String(i + 1) }), input, remove);
+    }));
+  }
+  draw();
+
+  root.append(
+    el('div', { className: 'bf-row' }, select, uploadBtn, fileInput),
+    altInput,
+    el('p', { className: 'hint il-hint', textContent: 'Click the picture to add a label spot. Drag a numbered marker to move it. Type each label below.' }),
+    stage, rows);
+  return root;
 }
