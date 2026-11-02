@@ -6,7 +6,8 @@
 
    - Sections after the first are locked until the student presses Next.
    - Inside the glitch editor's preview everything is unlocked so a teacher
-     can see all of their blocks while building.
+     can see all of their blocks while building, and each block gets a small
+     toolbar (drag handle, up, down, edit, delete) that talks to the editor.
    ================================================== */
 
 import { InputResponseActivity } from "./activities/input-response-activity.js";
@@ -18,40 +19,93 @@ const ACTIVITY_TYPES = {
   "multiple-choice": MultipleChoiceActivity
 };
 
-/* In the glitch editor's preview, each block gets an "Edit" button that asks the editor
-   to open that block's form. Blocks are found by the <!-- gtac:block --> comments around them. */
+/* Blocks are found by the <!-- gtac:block --> comments around them, in page order. */
+function findBlockElements() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT);
+  const blocks = [];
+  while (walker.nextNode()) {
+    if (!/^\s*gtac:block /.test(walker.currentNode.nodeValue)) continue;
+    let block = walker.currentNode.nextSibling;
+    while (block && block.nodeType !== 1) block = block.nextSibling;
+    if (block) blocks.push(block);
+  }
+  return blocks;
+}
+
+const EDITOR_STYLE =
+  ".gtac-editable { position: relative; outline: 2px dashed transparent; outline-offset: 4px; transition: outline-color .15s; }" +
+  ".gtac-editable:hover { outline-color: #7c5cff; }" +
+  ".gtac-toolbar { position: absolute; top: -16px; right: 12px; z-index: 5; display: flex; gap: 2px; padding: 3px;" +
+  " background: #7c5cff; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);" +
+  " opacity: 0; transition: opacity .15s; }" +
+  ".gtac-editable:hover > .gtac-toolbar, .gtac-toolbar:focus-within { opacity: 1; }" +
+  ".gtac-toolbar button { padding: 5px 9px; cursor: pointer; background: transparent; color: #fff; border: 0;" +
+  " border-radius: 999px; font: 700 13px/1 system-ui, sans-serif; }" +
+  ".gtac-toolbar button:hover { background: rgba(255,255,255,.25); }" +
+  ".gtac-toolbar .gtac-handle { cursor: grab; letter-spacing: -2px; }" +
+  ".gtac-drop-before { box-shadow: 0 -6px 0 #7c5cff; }" +
+  ".gtac-drop-after { box-shadow: 0 6px 0 #7c5cff; }";
+
 function enableBlockEditing() {
   const style = document.createElement("style");
-  style.textContent =
-    ".gtac-editable { position: relative; outline: 2px dashed transparent; outline-offset: 4px; transition: outline-color .15s; }" +
-    ".gtac-editable:hover { outline-color: #7c5cff; }" +
-    ".gtac-edit-btn { position: absolute; top: -14px; right: 12px; z-index: 5; padding: 6px 12px; cursor: pointer;" +
-    " background: #7c5cff; color: #fff; border: 0; border-radius: 999px; font: 700 13px/1 system-ui, sans-serif;" +
-    " opacity: 0; transition: opacity .15s; box-shadow: 0 2px 8px rgba(0,0,0,.25); }" +
-    ".gtac-editable:hover > .gtac-edit-btn, .gtac-edit-btn:focus { opacity: 1; }";
+  style.textContent = EDITOR_STYLE;
   document.head.appendChild(style);
 
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT);
-  const starts = [];
-  while (walker.nextNode()) {
-    if (/^\s*gtac:block /.test(walker.currentNode.nodeValue)) starts.push(walker.currentNode);
+  const blocks = findBlockElements();
+  const tell = function (message) { window.parent.postMessage(message, "*"); };
+
+  function clearDropMarks() {
+    blocks.forEach(function (b) { b.classList.remove("gtac-drop-before", "gtac-drop-after"); });
   }
 
-  starts.forEach(function (start, index) {
-    let block = start.nextSibling;
-    while (block && block.nodeType !== 1) block = block.nextSibling;
-    if (!block) return;
-
+  blocks.forEach(function (block, index) {
     block.classList.add("gtac-editable");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "gtac-edit-btn";
-    button.textContent = "✎ Edit";
-    button.addEventListener("click", function (event) {
-      event.stopPropagation();
-      window.parent.postMessage({ type: "gtac-edit-block", index: index }, "*");
+
+    function tool(label, title, onClick) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.title = title;
+      button.addEventListener("click", function (event) { event.stopPropagation(); onClick(); });
+      return button;
+    }
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "gtac-toolbar";
+
+    const handle = tool("⋮⋮", "Drag to move this block", function () {});
+    handle.className = "gtac-handle";
+    toolbar.appendChild(handle);
+    if (index > 0) toolbar.appendChild(tool("↑", "Move up", function () { tell({ type: "gtac-move-block", from: index, to: index - 1 }); }));
+    if (index < blocks.length - 1) toolbar.appendChild(tool("↓", "Move down", function () { tell({ type: "gtac-move-block", from: index, to: index + 1 }); }));
+    toolbar.appendChild(tool("✎ Edit", "Edit this block", function () { tell({ type: "gtac-edit-block", index: index }); }));
+    toolbar.appendChild(tool("✕", "Delete this block", function () { tell({ type: "gtac-delete-block", index: index }); }));
+    block.insertBefore(toolbar, block.firstChild);
+
+    /* Only the handle starts a drag, so selecting text and typing in the block keep working. */
+    handle.addEventListener("mousedown", function () { block.draggable = true; });
+    block.addEventListener("dragstart", function (event) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", String(index));
     });
-    block.insertBefore(button, block.firstChild);
+    block.addEventListener("dragend", function () { block.draggable = false; clearDropMarks(); });
+
+    block.addEventListener("dragover", function (event) {
+      event.preventDefault();
+      const box = block.getBoundingClientRect();
+      const after = event.clientY > box.top + box.height / 2;
+      clearDropMarks();
+      block.classList.add(after ? "gtac-drop-after" : "gtac-drop-before");
+    });
+    block.addEventListener("drop", function (event) {
+      event.preventDefault();
+      const from = Number(event.dataTransfer.getData("text/plain"));
+      const box = block.getBoundingClientRect();
+      let to = index + (event.clientY > box.top + box.height / 2 ? 1 : 0);
+      if (to > from) to -= 1;
+      clearDropMarks();
+      if (to !== from) tell({ type: "gtac-move-block", from: from, to: to });
+    });
   });
 }
 

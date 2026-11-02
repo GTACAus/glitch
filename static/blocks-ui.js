@@ -44,10 +44,13 @@ async function setupBlocks() {
     $('#bmCancel').onclick = () => $('#blockModal').close();
     $('#bmSave').onclick = saveBlockForm;
     renderPalette();
-    // The preview's "Edit" buttons ask us to open a block's form.
+    // The toolbar on each block in the preview asks us to edit, move or delete it.
     addEventListener('message', (e) => {
-      if (e.source !== $('#frame').contentWindow || e.data?.type !== 'gtac-edit-block' || S.tv) return;
-      editBlock(e.data.index);
+      const m = e.data;
+      if (e.source !== $('#frame').contentWindow || S.tv || !m) return;
+      if (m.type === 'gtac-edit-block') editBlock(m.index);
+      else if (m.type === 'gtac-move-block') moveBlockTo(m.from, m.to);
+      else if (m.type === 'gtac-delete-block') deleteBlock(m.index);
     });
   } catch (e) {
     console.warn('Blocks panel not available:', e);
@@ -143,14 +146,21 @@ async function addBlock(type) {
   editBlock(index);
 }
 
-async function moveBlock(i, by) {
+const moveBlock = (i, by) => moveBlockTo(i, i + by);
+
+// Take block `from` out and put it at position `to`, keeping the text between blocks where it was.
+async function moveBlockTo(from, to) {
   const model = await blocksModel();
   const text = model.getValue();
   const blocks = findBlocks(text);
-  const [a, b] = by < 0 ? [blocks[i - 1], blocks[i]] : [blocks[i], blocks[i + 1]];
-  if (!a || !b) return;
-  await setIndexText(text.slice(0, a.start) + text.slice(b.start, b.end) + text.slice(a.end, b.start) +
-    text.slice(a.start, a.end) + text.slice(b.end));
+  if (from === to || !blocks[from] || !blocks[to]) return;
+  const pieces = blocks.map((b) => text.slice(b.start, b.end));
+  pieces.splice(to, 0, pieces.splice(from, 1)[0]);
+  let next = text.slice(0, blocks[0].start);
+  pieces.forEach((piece, i) => {
+    next += piece + (i < blocks.length - 1 ? text.slice(blocks[i].end, blocks[i + 1].start) : '');
+  });
+  await setIndexText(next + text.slice(blocks[blocks.length - 1].end));
 }
 
 async function deleteBlock(i) {
