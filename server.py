@@ -56,6 +56,9 @@ AI_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
 AI_MODEL = os.environ.get("GLITCH_AI_MODEL", "openai/gpt-4o")
 # "Suggestions for you!" uses a quicker, cheaper model so the modal opens fast.
 IDEAS_MODEL = os.environ.get("GLITCH_IDEAS_MODEL", "openai/gpt-4o-mini")
+# Cap on the reply length: OpenRouter refuses a request if the key can't afford the full allowance.
+AI_MAX_TOKENS = int(os.environ.get("GLITCH_AI_MAX_TOKENS", 3500))
+IDEAS_MAX_TOKENS = int(os.environ.get("GLITCH_IDEAS_MAX_TOKENS", 1500))
 # Who may use the AI (it costs money per request): names separated by commas or spaces, in .env.
 # Unset or "*" means everyone, which suits a local checkout; set it on a shared server.
 AI_USERS = {u for u in re.split(r"[,\s]+", os.environ.get("GLITCH_AI_USERS", "*")) if u}
@@ -580,12 +583,13 @@ def json_schema(node):
     return node
 
 
-def call_ai(system, messages, schema, model=None):
+def call_ai(system, messages, schema, model=None, max_tokens=None):
     """One OpenRouter chat call that must answer with JSON matching schema; returns the parsed object, plus
     "_model": the model that actually served it, as OpenRouter reports it (models are unreliable about naming
     themselves). messages are [{"role": "user" | "assistant", "content": str}]."""
     payload = {
         "model": model or AI_MODEL,
+        "max_tokens": max_tokens or AI_MAX_TOKENS,
         "messages": [{"role": "system", "content": system}] + messages,
         "response_format": {"type": "json_schema", "json_schema": {
             "name": "answer", "strict": True, "schema": json_schema(schema)}},
@@ -748,7 +752,7 @@ def ai_ideas(pdir, current):
                 "title": {"type": "STRING"}, "why": {"type": "STRING"}, "prompt": {"type": "STRING"}},
             "required": ["kind", "title", "why", "prompt"]}}},
         "required": ["ideas"],
-    }, model=IDEAS_MODEL)
+    }, model=IDEAS_MODEL, max_tokens=IDEAS_MAX_TOKENS)
     ideas = [i for i in out.get("ideas") or [] if i.get("kind") in IDEA_KINDS and i.get("prompt")]
     ideas.sort(key=lambda i: IDEA_KINDS.index(i["kind"]))
     return {"file": rel, "ideas": ideas[:6], "model": out["_model"]}
