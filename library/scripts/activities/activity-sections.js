@@ -66,4 +66,4 @@ function createNextButtons(root) {
 }
 
 
-export { initSectionActivities, initSectionActivitiesIn };
+export { initSectionActivities, initSectionActivitiesIn, createNextButtons };

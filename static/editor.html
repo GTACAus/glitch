@@ -19,6 +19,7 @@
     <span id="owner" class="muted hide-sm"></span>
     <span id="saveStatus" class="save-status"></span>
     <button id="ideasBtn" class="ideas-link" hidden>✦ Suggestions for you!</button>
+    <button id="blocksBtn" class="btn primary" title="Add activities and sections to your lesson" hidden>＋ Add block</button>
     <div class="spacer"></div>
     <button id="rewindBtn" class="btn" title="See and restore earlier versions">⟲ Rewind</button>
     <button id="remixBtn" class="btn hide-sm" title="Make your own copy">⧉ Remix</button>
@@ -50,6 +51,13 @@
         <button id="checkpointBtn" class="btn small">★ Save a checkpoint</button>
         <p class="hint">Every save is kept. Click a moment to see it in the preview. Use ↑ ↓ to scrub.</p>
         <ol id="timeline" class="timeline" tabindex="0"></ol>
+      </div>
+      <div id="blocksPane" hidden>
+        <div class="pane-head"><span>Blocks</span><button id="closeBlocks" class="icon-btn" title="Close">×</button></div>
+        <p class="hint">Click a block to add it to your lesson.</p>
+        <div id="blockPalette" class="block-palette"></div>
+        <div class="pane-head"><span>On this page</span></div>
+        <ol id="blockList" class="block-list"></ol>
       </div>
       <div id="aiPane" class="ai-pane" hidden>
         <div class="pane-head"><span>✦ Ask AI</span><button id="aiClear" class="icon-btn" title="Start a new chat">⟲</button></div>
@@ -137,7 +145,15 @@
     <div id="ideasBody" class="ideas-grid"></div>
   </dialog>
 
+  <dialog id="blockModal" class="block-modal">
+    <div class="bm-head"><h2 id="bmTitle"></h2><div class="spacer"></div><button id="bmClose" class="icon-btn" type="button" title="Close">×</button></div>
+    <div id="bmBody" class="bm-body"></div>
+    <div class="bm-foot"><button id="bmCancel" class="btn" type="button">Cancel</button><button id="bmSave" class="btn primary" type="button">Save block</button></div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+  <script src="/_glitch/lib/blocks/blocks.js"></script>
+  <script src="/static/blocks-ui.js"></script>
   <script src="/static/build.js"></script>
   <script src="/static/editor.js"></script>
   <script src="/static/tour.js"></script>

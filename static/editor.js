@@ -100,6 +100,7 @@ async function init() {
   setupSplitter();
   setupHistory();
   setupAi();
+  setupBlocks();
   renderTree();
 
   const first = ['index.html', 'README.md'].find((p) => S.files.some((f) => f.path === p)) || S.files[0]?.path;
@@ -580,6 +581,7 @@ function setupHistory() {
 }
 
 async function toggleHistory(open = $('#historyPane').hidden) {
+  if (open && !$('#blocksPane').hidden) await toggleBlocks(false);
   $('#historyPane').hidden = !open;
   $('#filesPane').hidden = open;
   $('#rewindBtn').classList.toggle('on', open);

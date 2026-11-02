@@ -20,7 +20,8 @@ MSG=$(git log -1 --format=%s "$BRANCH" | tr -d '"\')
 printf '{"commit": "%s", "message": "%s", "committed": %s, "deployed": %s}' \
   "$SHA" "$MSG" "$(git log -1 --format=%ct "$BRANCH")" "$(date +%s)" > build.json
 
-git archive "$BRANCH" | ssh "$HOST" "tar -xf - -C ~/$DIR"
+# Code folders are replaced outright so removed files don't linger; data/ and .env are never touched.
+git archive "$BRANCH" | ssh "$HOST" "cd ~/$DIR && rm -rf static library starters && tar -xf -"
 scp -q build.json "$HOST:$DIR/build.json"
 ssh "$HOST" "sudo systemctl restart $SVC && sleep 1 && systemctl is-active $SVC"
 echo "Deployed $SHA ($BRANCH) to $URL"

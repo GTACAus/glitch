@@ -425,3 +425,49 @@ a.brand-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2
 .login-dialog { padding: 0; border: 0; background: transparent; }
 .login-dialog::backdrop { background: rgba(10, 8, 20, .55); backdrop-filter: blur(2px); }
 .login-dialog .login { margin: 0; }
+
+/* ---------- Blocks panel and edit form (lesson pages) ---------- */
+.block-palette { display: grid; gap: 6px; padding: 0 10px 12px; }
+.block-card {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  padding: 8px 10px; background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius); font: inherit;
+}
+.block-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.block-card b { font-size: 13px; }
+.block-card span { font-size: 11px; color: var(--muted); line-height: 1.35; }
+.block-list { list-style: none; margin: 0; padding: 0 10px 16px; display: grid; gap: 4px; }
+.block-row {
+  display: flex; align-items: center; gap: 2px; padding: 6px 4px 6px 8px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+}
+.block-row:hover { border-color: var(--accent); }
+.block-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.block-row-text b { font-size: 12px; }
+.block-row-text span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-row .icon-btn { width: 22px; height: 22px; font-size: 12px; }
+.block-row .icon-btn:disabled { opacity: .3; cursor: default; }
+
+.block-modal {
+  width: min(680px, 94vw); max-height: 88vh; padding: 0; border: 0; border-radius: 14px;
+  background: var(--panel); color: var(--text); box-shadow: var(--shadow);
+}
+.block-modal::backdrop { background: rgba(10, 8, 20, .55); backdrop-filter: blur(2px); }
+.block-modal[open] { display: flex; flex-direction: column; }
+.bm-head, .bm-foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
+.bm-head { border-bottom: 1px solid var(--line); }
+.bm-head h2 { margin: 0; font-size: 16px; }
+.bm-foot { border-top: 1px solid var(--line); justify-content: flex-end; }
+.bm-body { padding: 14px 16px; overflow: auto; display: grid; gap: 14px; }
+.bf-field { display: grid; gap: 6px; }
+.bf-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.bf-field input[type="text"], .bf-field input[type="number"], .bf-field textarea {
+  width: 100%; padding: 7px 10px; font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.bf-rows, .bf-cards { display: grid; gap: 6px; }
+.bf-row { display: flex; align-items: center; gap: 8px; }
+.bf-row input[type="radio"] { flex: none; accent-color: var(--accent); }
+.bf-field > .btn { justify-self: start; }
+.bf-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.bf-card-head { display: flex; align-items: center; justify-content: space-between; }
