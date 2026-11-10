@@ -468,8 +468,12 @@ function setupPreview() {
 // ------------------------------------------------------------------ preview right-click menu
 
 const STYLE_GROUPS = {
-  Text: [['color', 'color'], ['font-size'], ['font-weight', ['100', '200', '300', '400', '500', '600', '700', '800', '900']],
-    ['font-style', ['normal', 'italic']], ['font-family'], ['line-height'], ['letter-spacing'],
+  Text: [
+    ['color', 'color'],
+    ['font-size'],
+    ['font-weight', ['100', '200', '300', '400', '500', '600', '700', '800', '900']],
+    ['font-style', ['normal', 'italic']],
+    ['font-family'], ['line-height'], ['letter-spacing'],
     ['text-align', ['left', 'center', 'right', 'justify']], ['text-decoration-line', ['none', 'underline', 'line-through']],
     ['text-transform', ['none', 'uppercase', 'lowercase', 'capitalize']]],
   Background: [['background-color', 'color'], ['background-image'], ['background-size'], ['opacity']],
