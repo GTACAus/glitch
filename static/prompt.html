@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt maker · glitch~nhance</title>
+<link rel="icon" href="/static/favicon.svg">
+<style>
+  :root { --bg:#f4f3fb; --fg:#1b1b24; --muted:#666; --card:#fff; --line:#dcdaf0; --accent:#6d4aff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14141b; --fg:#ececf4; --muted:#9a9ab0; --card:#1e1e28; --line:#33334a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,-apple-system,sans-serif; }
+  header { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+  header a { color:var(--accent); text-decoration:none; font-weight:600; }
+  .wrap { max-width:1100px; margin:0 auto; padding:20px 16px; display:grid; gap:20px; grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  @media (max-width:800px) { .wrap { grid-template-columns:minmax(0,1fr); } }
+  h1 { margin:0 0 4px; font-size:26px; } p.lead { margin:0 0 16px; color:var(--muted); }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  label { display:block; font-weight:600; margin:12px 0 4px; } small { display:block; color:var(--muted); font-weight:400; }
+  input, textarea, select { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); }
+  textarea { min-height:70px; resize:vertical; }
+  .kinds { display:flex; gap:8px; flex-wrap:wrap; }
+  .kinds button { flex:1; min-width:140px; padding:10px; font:inherit; border:2px solid var(--line); border-radius:10px; background:var(--card); color:var(--fg); cursor:pointer; text-align:left; }
+  .kinds button[aria-pressed=true] { border-color:var(--accent); }
+  .kinds b { display:block; }
+  #out { min-height:360px; font:13px/1.45 ui-monospace,Menlo,monospace; }
+  .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .btn { padding:9px 16px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; text-decoration:none; }
+  .btn.alt { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  @media (max-width:640px) { input, textarea, select { font-size:16px; } .wrap { padding:14px 12px; } }
+  ol { padding-left:20px; margin:8px 0 0; color:var(--muted); }
+</style>
+</head>
+<body>
+<header><a href="/">← glitch~nhance</a><span style="color:var(--muted)">Prompt maker</span></header>
+<div class="wrap">
+  <section>
+    <h1>Describe your app</h1>
+    <p class="lead">Answer a few questions. We write the prompt. Paste it into Gemini and it builds you a starter app.</p>
+    <div class="kinds" id="kinds"></div>
+    <div class="panel" style="margin-top:12px"><div id="fields"></div></div>
+  </section>
+  <section>
+    <div class="panel">
+      <h2 style="margin:0 0 8px;font-size:18px">Your prompt</h2>
+      <textarea id="out" readonly></textarea>
+      <div class="row">
+        <button class="btn" id="copy">Copy prompt</button>
+        <a class="btn alt" href="https://gemini.google.com/app" target="_blank" rel="noopener">Open Gemini ↗</a>
+        <a class="btn alt" href="https://aistudio.google.com/prompts/new_chat" target="_blank" rel="noopener">Open AI Studio ↗</a>
+      </div>
+      <ol>
+        <li>Copy the prompt and paste it into Gemini. It replies with one block of code.</li>
+        <li>On glitch~nhance make a new project from the matching AI template.</li>
+        <li>Open <code>index.html</code>, select all and paste Gemini's code over it. Leave <code>ai-config.js</code> alone.</li>
+        <li>Press <b>⚙ Refactor</b> in the top bar to split it into separate <code>.html</code>, <code>.css</code> and <code>.js</code> files.</li>
+        <li>Press play. It asks for your API key the first time. Then use the AI helper to refactor and polish.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+<script>
+// The contract: what the template project already gives the generated code. Keep this in step with templates/_shared/ai-config.js.
+const CONTRACT = `TECHNICAL RULES (follow exactly):
+- Pure HTML, CSS and JavaScript only. No build step, no npm, no frameworks to install, no server code. It must run by opening the file in a browser.
+- Produce ONE file: a complete index.html with all CSS in a <style> tag and all JavaScript in a <script> tag at the end of <body>. No other files.
+- ai-config.js already exists in the project. Load it with <script src="ai-config.js"><\/script> BEFORE your own inline script, and do NOT write its contents.
+- Do all AI calls through the existing global \`AI\` object from ai-config.js. Never call an AI API directly, never hard-code or ask for an API key.
+    await AI.ready()  // shows the key setup dialog the first time; call once on page load
+    const text = await AI.chat({ system: "instructions for the AI", messages: [{ role: "user" | "model", text: "..." }] })  // returns the reply as a string; throws an Error with a readable message on failure
+    // Do NOT add your own AI key or settings UI: glitch~nhance has an "AI settings" button for the key and model, and AI.ready() / AI.chat() wait for it automatically.
+- Always show a visible "thinking…" state while waiting, disable the send button meanwhile, and show any thrown error message to the user on the page.
+- Make it responsive, accessible (labels, focus states, sufficient contrast) and tidy on a phone.
+- Keep the code well organised with short comments and clearly named functions and constants (the system prompt in one const at the top of the script), because it will be refactored afterwards.
+OUTPUT FORMAT: reply with the code ONLY: a single fenced html code block containing the whole index.html. No explanation before or after, no preview, no list of changes, no other code blocks.`;
+
+const KINDS = {
+  chat: {
+    title: 'AI chat app', blurb: 'A chatbot with a personality you define.',
+    intro: 'Build a single-page AI CHAT app. The user types messages and the AI replies in character; keep the conversation history in memory and send it with each request.',
+    fields: [
+      ['name', 'Bot name', 'input', 'Captain Biscuit'],
+      ['who', 'Who is the bot?', 'textarea', 'A cheerful retired pirate who runs a seaside cafe', 'Personality, background, how it talks.'],
+      ['knows', 'What does it know about?', 'textarea', 'Cafe menu, sea shanties, local weather', 'Facts, topics or rules of its world.'],
+      ['never', 'What must it never do?', 'textarea', 'Never say it is an AI. Never give medical advice.'],
+      ['length', 'Reply length', 'input', 'Under 80 words'],
+      ['greeting', 'First message from the bot', 'input', "Ahoy! What'll it be?"],
+      ['look', 'Look and feel', 'textarea', 'Warm cream background, navy header, rounded chat bubbles', 'Colours, mood, layout.'],
+      ['extra', 'Anything else?', 'textarea', '', 'Optional: extra features, e.g. suggested questions as buttons.'],
+    ],
+    build: (v) => `${v.name ? `The app is called "${v.name}". ` : ''}
+SYSTEM PROMPT for the AI (put it in a const SYSTEM_PROMPT at the top of the inline script, written from the details below, in second person "You are..."):
+- Who the bot is: ${v.who}
+- What it knows: ${v.knows}
+- Never: ${v.never}
+- Reply length: ${v.length}
+Show this as the bot's first message: ${v.greeting}
+Chat layout: scrolling message list (user bubbles right, bot bubbles left), input and Send button fixed at the bottom, Enter sends.`,
+  },
+  app: {
+    title: 'AI app', blurb: 'A freeform tool where the AI does a job for you.',
+    intro: 'Build a single-page AI TOOL (not a chat). The user provides some input on the page, presses a button, the app makes ONE call to the AI with a prompt you design, and shows the result clearly.',
+    fields: [
+      ['name', 'App name', 'input', 'Tone Tweaker'],
+      ['job', 'What does it do, in one sentence?', 'textarea', 'Rewrites any text in a tone I choose'],
+      ['inputs', 'What does the user give it?', 'textarea', 'A box of text and a dropdown to choose the tone', 'Fields, dropdowns, buttons, uploads of text.'],
+      ['output', 'What should the AI give back?', 'textarea', 'The rewritten text with a Copy button', 'Format: text, list, table, steps, JSON shown nicely...'],
+      ['rules', "Rules for the AI's answers", 'textarea', 'Keep the meaning, never add facts, reply with only the result'],
+      ['look', 'Look and feel', 'textarea', 'Clean and minimal, one accent colour', 'Colours, mood, layout.'],
+      ['extra', 'Anything else?', 'textarea', '', 'Optional: history of past results, save to localStorage, etc.'],
+    ],
+    build: (v) => `${v.name ? `The app is called "${v.name}". ` : ''}
+What it does: ${v.job}
+Inputs on the page: ${v.inputs}
+What the result should look like: ${v.output}
+Rules the AI must follow (write them as the \`system\` instructions in the AI.chat call, in second person): ${v.rules}
+Use one AI.chat call per button press with a single user message that contains the inputs.`,
+  },
+};
+
+const $ = (id) => document.getElementById(id);
+const state = { kind: new URLSearchParams(location.search).get('kind') in KINDS ? new URLSearchParams(location.search).get('kind') : 'chat', vals: {} };
+try { Object.assign(state.vals, JSON.parse(localStorage.getItem('promptmaker.vals') || '{}')); } catch {}
+
+function renderKinds() {
+  $('kinds').replaceChildren(...Object.entries(KINDS).map(([id, k]) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', id === state.kind);
+    b.innerHTML = `<b>${k.title}</b><small>${k.blurb}</small>`;
+    b.onclick = () => { state.kind = id; renderKinds(); renderFields(); update(); };
+    return b;
+  }));
+}
+function renderFields() {
+  const k = KINDS[state.kind];
+  $('fields').replaceChildren(...k.fields.flatMap(([key, label, type, ph, hint]) => {
+    const l = document.createElement('label');
+    l.innerHTML = `${label}${hint ? `<small>${hint}</small>` : ''}`;
+    l.htmlFor = 'f-' + key;
+    const f = document.createElement(type);
+    f.id = 'f-' + key; f.placeholder = ph || '';
+    f.value = (state.vals[state.kind] || {})[key] || '';
+    f.oninput = () => { (state.vals[state.kind] ||= {})[key] = f.value; try { localStorage.setItem('promptmaker.vals', JSON.stringify(state.vals)); } catch {} update(); };
+    return [l, f];
+  }));
+}
+function update() {
+  const k = KINDS[state.kind], saved = state.vals[state.kind] || {};
+  // An empty answer falls back to the placeholder example so the prompt is always complete.
+  const v = Object.fromEntries(k.fields.map(([key, , , ph]) => [key, (saved[key] || '').trim() || ph || '']));
+  const extra = v.extra ? `\nExtra requests: ${v.extra}` : '';
+  $('out').value = `You are an expert front-end developer. ${k.intro}\n\n${k.build(v).trim()}\nLook and feel: ${v.look}.${extra}\n\n${CONTRACT}`;
+}
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('out').value); } catch { $('out').select(); document.execCommand('copy'); }
+  $('copy').textContent = 'Copied ✓'; setTimeout(() => ($('copy').textContent = 'Copy prompt'), 1500);
+};
+renderKinds(); renderFields(); update();
+</script>
+</body>
+</html>
