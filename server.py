@@ -251,6 +251,9 @@ def load_starters():
         meta = json.loads(meta_file.read_text(encoding="utf-8"))
         files = {p.relative_to(folder).as_posix(): p
                  for p in sorted(folder.rglob("*")) if p.is_file() and p != meta_file}
+        # "shared": files kept once in starters/_shared/ and copied into each starter that lists them.
+        for shared in meta.get("shared", []):
+            files[shared] = STARTERS / "_shared" / shared
         found[folder.name] = {"title": meta["title"], "description": meta.get("description", ""),
                               "order": meta.get("order", 100), "files": files}
     return dict(sorted(found.items(), key=lambda kv: (kv[1]["order"], kv[0])))
@@ -408,6 +411,24 @@ The person reviews your changes as a diff before applying them, so keep edits fo
 and keep the existing code style."""
 
 
+AI_APPS_NOTE = (ROOT / "prompts" / "ai-apps.md").read_text(encoding="utf-8")
+
+
+def uses_ai(pdir):
+    """True when the project talks to an AI from the browser (so the assistant should know the key conventions)."""
+    for rel in list_files(pdir):
+        if rel == "ai-config.js" or rel.endswith("/ai-config.js"):
+            return True
+        if not is_binary(rel) and (pdir / rel).stat().st_size < 400_000:
+            try:
+                t = (pdir / rel).read_text()
+            except (UnicodeDecodeError, OSError):
+                continue
+            if "generativelanguage.googleapis.com" in t or "openrouter.ai" in t:
+                return True
+    return False
+
+
 def ai_context(pdir, current, selection):
     parts, used = [], 0
     files = list_files(pdir)
@@ -501,7 +522,7 @@ def ask_ai(pdir, messages, current, selection):
                 for m in msgs[:-1]]
     contents.append({"role": "user", "content":
                      ai_context(pdir, current, selection) + "\n\nRequest: " + str(msgs[-1]["text"])[:20000]})
-    out = call_ai(AI_SYSTEM, contents, {
+    out = call_ai(AI_SYSTEM + ("\n\n" + AI_APPS_NOTE if uses_ai(pdir) else ""), contents, {
         "type": "OBJECT",
         "properties": {
             "reply": {"type": "STRING"},
@@ -745,7 +766,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def serve_static(self, rel, base=STATIC, extra=()):
         full = (base / rel).resolve()
-        if base.resolve() not in full.parents or not full.is_file():
+        if base == STATIC and rel == "ai-config.js":  # the editor shares the AI starters' key/model dialog
+            full = STARTERS / "_shared" / "ai-config.js"
+        elif base.resolve() not in full.parents or not full.is_file():
             raise HTTPError(404, "Not found")
         self.send(200, full.read_bytes(), content_type(full.name), [("Cache-Control", "no-cache"), *extra])
 

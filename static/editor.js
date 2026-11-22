@@ -117,6 +117,11 @@ function setupHeader() {
   $('#owner').textContent = p.can_edit ? '' : `by ${p.owner_name}`;
   $('#openPreview').href = S.previewBase;
   $('#exportBtn').href = `${PROJ}/export`;
+  // The key/model for the AI inside people's apps is set here, not inside the apps: the preview asks us to open it.
+  $('#aiSettingsBtn').onclick = () => AI.openSettings();
+  addEventListener('message', (e) => {
+    if (e.origin === location.origin && e.data && e.data.type === 'glitch:ai-settings') AI.openSettings(e.data.message);
+  });
   if (p.can_edit) {
     nameBtn.classList.add('editable');
     nameBtn.title = 'Rename project';
@@ -234,12 +239,99 @@ function renderFileBar() {
   bar.replaceChildren(el('span', { textContent: S.current || '' }));
   if (S.tv) bar.append(el('span', { textContent: '· rewind view (read only)' }));
   if (S.ai) bar.replaceChildren(el('span', { textContent: `${S.ai.file} · AI suggestion (not applied yet)` }));
-  if (!S.tv && !S.ai && S.current && S.project.can_edit && prettierParser(S.current)) {
+  const normal = !S.tv && !S.ai && S.current && S.project.can_edit;
+  if (!normal) return;
+  bar.append(el('div', { className: 'spacer' }));
+  if (S.current.endsWith('.html')) {
+    const r = el('button', { className: 'btn small prettier-btn', title: 'Split this page into separate .html, .css and .js files',
+      textContent: '🛠️ Refactor' });
+    r.onclick = () => refactorSplit();
+    bar.append(r);
+  }
+  if (prettierParser(S.current)) {
     const b = el('button', { className: 'btn small prettier-btn', title: 'Tidy this file with Prettier (Shift+Alt+F)',
       textContent: '✨ Prettier' });
     b.onclick = () => formatCurrent();
-    bar.append(el('div', { className: 'spacer' }), b);
+    bar.append(b);
   }
+}
+
+// ------------------------------------------------------------------ refactor: one .html -> .html + .css + .js
+
+const dedent = (t) => {
+  const lines = t.replace(/^\s*\n/, '').replace(/\s+$/, '').split('\n');
+  const pad = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^[ \t]*/)[0].length));
+  return lines.map((l) => l.slice(Number.isFinite(pad) ? pad : 0)).join('\n') + '\n';
+};
+
+// Pure text work, so it is easy to trust: pulls the inline <style> and <script> blocks out of an HTML page.
+function splitHtml(html, cssName, jsName) {
+  const css = [], js = [];
+  let cssAt = false;
+  let out = html.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (all, body) => {
+    css.push(dedent(body));
+    if (cssAt) return '';
+    cssAt = true;
+    return `<link rel="stylesheet" href="${cssName}">`;
+  });
+  // Only plain inline scripts move. External ones (src=), JSON and other non-JS types stay where they are.
+  const matches = [];
+  for (const m of out.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    const attrs = m[1];
+    if (/\bsrc\s*=/i.test(attrs)) continue;
+    const type = (attrs.match(/\btype\s*=\s*["']?([^"'\s>]+)/i) || [])[1];
+    if (type && !/^(text\/javascript|module)$/i.test(type)) continue;
+    matches.push({ at: m.index, len: m[0].length, body: m[2], module: type === 'module' });
+  }
+  if (matches.length) {
+    const jsModule = matches.some((m) => m.module);
+    matches.forEach((m) => js.push(dedent(m.body)));
+    // Replace back to front so the earlier offsets stay valid: the last block becomes the <script src>, the rest vanish.
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const m = matches[i];
+      const tag = i === matches.length - 1 ? `<script${jsModule ? ' type="module"' : ''} src="${jsName}"></script>` : '';
+      out = out.slice(0, m.at) + tag + out.slice(m.at + m.len);
+    }
+  }
+  out = out.replace(/\n[ \t]*\n([ \t]*\n)+/g, '\n\n');
+  return { html: out, css: css.join('\n'), js: js.join('\n') };
+}
+
+async function refactorSplit() {
+  if (!S.project.can_edit) return;
+  const src = S.current && S.current.endsWith('.html') ? S.current : 'index.html';
+  if (!S.files.some((f) => f.path === src)) return toast(`There's no ${src} to refactor.`, 'error');
+  await flushAll();
+  const html = await fetchText(fileUrl(src));
+  const dir = src.includes('/') ? src.slice(0, src.lastIndexOf('/') + 1) : '';
+  const base = src.slice(dir.length).replace(/\.html?$/i, '');
+  const stem = base === 'index' ? ['style', 'script'] : [base, base];
+  const cssName = `${stem[0]}.css`, jsName = `${stem[1]}.js`;
+  const r = splitHtml(html, cssName, jsName);
+  if (!r.css.trim() && !r.js.trim()) return toast('Nothing to split: there is no inline <style> or <script> in ' + src, 'error');
+  const writes = [[dir + cssName, r.css], [dir + jsName, r.js]].filter(([, t]) => t.trim());
+  const clobber = [];
+  for (const [path, text] of writes) {
+    if (!S.files.some((f) => f.path === path)) continue;
+    const old = await fetchText(fileUrl(path));
+    if (old.trim() && old.trim() !== text.trim()) clobber.push(path);
+  }
+  if (clobber.length && !confirm(`This replaces ${clobber.join(' and ')} with the code from ${src}.\n\nYou can get it back from Rewind. Continue?`)) return;
+  try {
+    for (const [path, text] of writes) {
+      const model = S.models.get(path);
+      if (model) model.setValue(text); else await api('PUT', fileUrl(path), text);
+    }
+    const model = S.models.get(src);
+    if (model) model.pushEditOperations([], [{ range: model.getFullModelRange(), text: r.html }], () => null);
+    else await api('PUT', fileUrl(src), r.html);
+    await flushAll();
+    await refreshFiles();
+    reloadPreview();
+    toast(`Split into ${[src, ...writes.map(([p]) => p)].join(', ')} ✓  You can undo it from Rewind.`);
+    S.current = null;
+    openFile(src);
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 function scheduleSave(path) {

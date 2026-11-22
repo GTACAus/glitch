@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tone Tweaker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="ai-config.js"></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <h1>Tone Tweaker</h1>
+    </header>
+    <main>
+      <label for="text">Paste some text</label>
+      <textarea id="text" rows="6" placeholder="hey can u send me the report asap thx"></textarea>
+      <label for="tone">Make it sound…</label>
+      <select id="tone">
+        <option>polite and professional</option>
+        <option>friendly and casual</option>
+        <option>short and direct</option>
+        <option>like a pirate</option>
+      </select>
+      <button id="go">Rewrite it</button>
+      <section id="out" hidden>
+        <h2>Result</h2>
+        <div id="result"></div>
+        <button id="copy">Copy</button>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "title": "AI chat app",
+  "description": "A chatbot with a character you write. Asks for a Gemini or OpenRouter key the first time.",
+  "order": 3,
+  "shared": ["ai-config.js"]
+}

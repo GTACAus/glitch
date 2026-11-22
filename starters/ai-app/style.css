@@ -1,0 +1,11 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: #f4f1ea; color: #222; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #272a24; color: #fff; }
+header h1 { margin: 0; font-size: 18px; }
+main { max-width: 640px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; }
+label { font-weight: 600; margin-top: 8px; }
+textarea, select { font: inherit; padding: 10px; border: 1px solid #bbb; border-radius: 8px; width: 100%; }
+#go, #copy { align-self: flex-start; margin-top: 10px; padding: 10px 18px; font: inherit; background: #4c34e5; color: #fff; border: 0; border-radius: 8px; cursor: pointer; }
+#go:disabled { opacity: .5; }
+#result { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; }
+#result.error { background: #fdecea; color: #a12; border-color: #f5c2c0; }

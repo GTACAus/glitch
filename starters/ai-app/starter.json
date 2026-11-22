@@ -1,0 +1,6 @@
+{
+  "title": "AI app",
+  "description": "A freeform AI tool: your own screen, with the AI doing the thinking. Asks for a Gemini or OpenRouter key the first time.",
+  "order": 4,
+  "shared": ["ai-config.js"]
+}
