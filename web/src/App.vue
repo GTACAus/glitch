@@ -1,11 +1,11 @@
-<script setup></script>
+<script setup>
+import ToastHost from '@/components/ToastHost.vue';
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <!-- Keyed on the path, so /edit/a → /edit/b builds a fresh editor rather than reusing it. -->
+  <RouterView v-slot="{ Component, route }">
+    <component :is="Component" :key="route.path" />
+  </RouterView>
+  <ToastHost />
 </template>
-
-<style scoped></style>
