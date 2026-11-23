@@ -26,7 +26,12 @@
 
   // Right-click menu support: the editor draws the menu and style panel, we just describe and restyle the element.
   let target = null;
-  let originalStyle = null;
+  // Elements whose inline style we've changed, with their original style attribute, for resetting.
+  const touched = new Map();
+  const restyle = (el, prop, value) => {
+    if (!touched.has(el)) touched.set(el, el.getAttribute('style'));
+    if (value) el.style.setProperty(prop, value); else el.style.removeProperty(prop);
+  };
   const selectorFor = (node) => {
     const parts = [];
     for (; node && node.nodeType === 1 && node !== document.documentElement; node = node.parentElement) {
@@ -49,7 +54,6 @@
     if (!(e.target instanceof Element)) return;
     e.preventDefault();
     target = e.target;
-    originalStyle = target.getAttribute('style');
     const html = target.outerHTML;
     post({
       type: 'contextmenu', x: e.clientX, y: e.clientY, tag: target.localName, selector: selectorFor(target),
@@ -64,10 +68,15 @@
       const cs = getComputedStyle(target);
       post({ type: 'styles', values: Object.fromEntries(d.props.map((p) => [p, cs.getPropertyValue(p)])) });
     } else if (d.cmd === 'setStyle') {
-      if (d.value) target.style.setProperty(d.prop, d.value); else target.style.removeProperty(d.prop);
+      // With a selector (e.g. "p"), style every matching element; otherwise just the clicked one.
+      let els = [target];
+      if (d.selector) try { els = document.querySelectorAll(d.selector); } catch {}
+      for (const el of els) restyle(el, d.prop, d.value);
     } else if (d.cmd === 'resetStyles') {
-      target.removeAttribute('style');
-      if (originalStyle) target.setAttribute('style', originalStyle);
+      for (const [el, orig] of touched) {
+        if (orig === null) el.removeAttribute('style'); else el.setAttribute('style', orig);
+      }
+      touched.clear();
     }
   });
 })();

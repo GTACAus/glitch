@@ -10,6 +10,7 @@ import { api } from '@/lib/api.js';
 import { cleanPath, ext, fmtTime, langFor, mediaKind } from '@/lib/files.js';
 import { formatText, prettierParser } from '@/lib/prettier.js';
 import { diffHelpOnce } from '@/lib/tour.js';
+import { upsertRule } from '@/lib/cssEdit.js';
 import { useToastStore } from '@/stores/toasts.js';
 import { useRewindStore } from '@/stores/rewind.js';
 import { useAiStore } from '@/stores/ai.js';
@@ -34,7 +35,7 @@ export const useEditorStore = defineStore('editor', () => {
   const logs = ref([]); // { id, level, text } from the preview's console
   const errors = ref(0);
   const ctxMenu = ref(null); // { info } while the preview's right-click menu is open
-  const style = ref(null); // { info, changes, values, version } while the style panel is open
+  const style = ref(null); // { info, changes, values, version, all } while the style panel is open
 
   const canEdit = computed(() => !!project.value?.can_edit);
   const projUrl = computed(() => `/api/projects/${encodeURIComponent(name.value)}`);
@@ -578,9 +579,14 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function openStylePanel(info, props) {
-    style.value = { info, changes: {}, values: null, version: 0, props };
+    style.value = { info, changes: {}, values: null, version: 0, props, all: false };
     sendFrame({ cmd: 'getStyles', props });
   }
+
+  // The CSS selector the panel's changes apply to: the one element, or every element of its tag.
+  const styleSelector = computed(() =>
+    style.value ? (style.value.all ? style.value.info.tag : style.value.info.selector) : '',
+  );
 
   function fillStylePanel(values) {
     if (!style.value) return;
@@ -591,7 +597,45 @@ export const useEditorStore = defineStore('editor', () => {
   function setStyle(prop, value) {
     if (!style.value) return;
     style.value.changes[prop] = value;
-    sendFrame({ cmd: 'setStyle', prop, value });
+    sendFrame({ cmd: 'setStyle', prop, value, selector: style.value.all ? styleSelector.value : null });
+  }
+
+  // Switch between styling just the clicked element and every element of its tag.
+  // The changes made so far carry over, re-applied to the new set of elements.
+  function setStyleAll(all) {
+    const s = style.value;
+    if (!s) return;
+    s.all = all;
+    sendFrame({ cmd: 'resetStyles' });
+    for (const [prop, value] of Object.entries(s.changes)) {
+      sendFrame({ cmd: 'setStyle', prop, value, selector: all ? styleSelector.value : null });
+    }
+  }
+
+  // Write the style panel's changes into the project's CSS. If there's already a rule for the
+  // same selector, it's updated in place rather than adding another one after it.
+  async function saveStyles() {
+    const s = style.value;
+    if (!s || !canEdit.value) return;
+    if (!Object.keys(s.changes).length) return toast('Change a style first');
+
+    const css = files.value.map((f) => f.path).filter((p) => p.endsWith('.css'));
+    const path = css.includes('style.css') ? 'style.css' : css[0] || 'style.css';
+    const text = (await currentText(path)) ?? '';
+    const next = upsertRule(text, styleSelector.value, s.changes);
+    if (next === text) {
+      closeStylePanel();
+      return toast('Nothing to save');
+    }
+
+    // If the file is open in the editor, this goes through normal autosave and undo.
+    if (!replaceText(path, next)) {
+      await api('PUT', fileUrl(path), next);
+      await refreshFiles();
+      refreshPreview(path);
+    }
+    closeStylePanel();
+    toast(`Saved to ${path}`);
   }
 
   function resetStyles() {
@@ -625,6 +669,7 @@ export const useEditorStore = defineStore('editor', () => {
     errors,
     ctxMenu,
     style,
+    styleSelector,
     canEdit,
     projUrl,
     previewBase,
@@ -679,6 +724,8 @@ export const useEditorStore = defineStore('editor', () => {
     openStylePanel,
     fillStylePanel,
     setStyle,
+    saveStyles,
+    setStyleAll,
     resetStyles,
     closeStylePanel,
   };
