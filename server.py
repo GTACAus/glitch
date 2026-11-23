@@ -44,8 +44,8 @@ def load_env(path):
 
 load_env(ROOT / ".env")
 STATIC = ROOT / "static"
-# The Vue app, built by `npm run build` in web/. Until it has been built, the old pages in static/
-# are served instead.
+# The Vue app, built by `npm run build` in web/ (deploy/deploy.sh does this). static/ only holds
+# what the built app and previews share: style.css, favicon.svg and bridge.js.
 DIST = Path(os.environ.get("GLITCH_DIST", ROOT / "web" / "dist")).resolve()
 DATA = Path(os.environ.get("GLITCH_DATA", ROOT / "data")).resolve()
 PROJECTS = DATA / "projects"
@@ -299,6 +299,34 @@ btn.addEventListener("click", () => {
   console.log("click!", clicks);
 });
 """,
+        },
+    },
+    # Edited in the page builder (web/src/views/PageBuilderView.vue). page.json is the page as data;
+    # the builder rewrites the other three files from it whenever the page changes.
+    "builder": {
+        "title": "Page builder",
+        "description": "Build a page from sections, text and buttons, then wire them up",
+        "builder": True,
+        "files": {
+            "page.json": '{\n  "version": 1,\n  "title": "My page",\n  "items": [],\n  "rules": []\n}\n',
+            "index.html": """<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My page</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>My page</h1>
+    </main>
+  </body>
+</html>
+""",
+            "style.css": "body {\n  font-family: system-ui, sans-serif;\n  margin: 0;\n}\n",
+            "script.js": "",
         },
     },
     "game": {
@@ -777,6 +805,13 @@ NOT_FOUND_PAGE ="""<!doctype html><meta charset="utf-8"><title>Not found</title>
 <body style="font-family:system-ui;padding:2rem;color:#555">
 <h2>404 — nothing here</h2><p>There's no file called <code>{}</code> in this project.</p>"""
 
+# Shown for the app's pages when web/dist/ is missing.
+NOT_BUILT_PAGE = """<!doctype html><meta charset="utf-8"><title>Not built</title>
+<body style="font-family:system-ui;padding:2rem;color:#555">
+<h2>The web app hasn't been built</h2>
+<p>Run <code>npm ci &amp;&amp; npm run build</code> in <code>web/</code>, or use
+<code>npm run dev</code> there while developing. deploy/deploy.sh builds it for you.</p>"""
+
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -915,18 +950,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.set_key_cookie(key)
                 return self.redirect("/")
             return self.redirect("/?badkey=1")
-        if (DIST / "index.html").is_file():
+        if path in ("/", "/index.html") or path.startswith("/edit/"):
             # The Vue app is one page; its router works out which screen to show from the URL.
-            if path in ("/", "/index.html") or path.startswith("/edit/"):
-                return self.serve_file(DIST, "index.html")
-            if path.startswith("/assets/"):
-                # Vite puts a hash of each file's contents in its name, so a name never changes
-                # meaning and browsers can keep the file for good.
-                return self.serve_file(DIST, path[1:], "public, max-age=31536000, immutable")
-        elif path in ("/", "/index.html"):
-            return self.serve_static("index.html")
-        elif path.startswith("/edit/"):
-            return self.serve_static("editor.html")
+            if not (DIST / "index.html").is_file():
+                return self.send(503, NOT_BUILT_PAGE, "text/html; charset=utf-8",
+                                 [("Cache-Control", "no-store")])
+            return self.serve_file(DIST, "index.html")
+        if path.startswith("/assets/"):
+            # Vite puts a hash of each file's contents in its name, so a name never changes
+            # meaning and browsers can keep the file for good.
+            return self.serve_file(DIST, path[1:], "public, max-age=31536000, immutable")
         if path.startswith("/static/"):
             return self.serve_static(path[len("/static/"):])
         if path == "/favicon.ico":
@@ -988,7 +1021,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "preview_host": PREVIEW_HOST or None,
                 "ai": ai_allowed(user),
                 "build": build_info(),
-                "templates": [{"id": k, "title": v["title"], "description": v["description"]}
+                "templates": [{"id": k, "title": v["title"], "description": v["description"],
+                               "builder": bool(v.get("builder"))}
                               for k, v in TEMPLATES.items()],
             })
         if parts == ["login"] and method == "POST":
@@ -1013,7 +1047,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 rows = q("SELECT p.name, p.owner, u.name AS owner_name, p.description, p.created, "
                          "p.updated, p.remixed_from FROM projects p LEFT JOIN users u ON u.id=p.owner "
                          "ORDER BY p.updated DESC")
-                return self.send_json([dict(r) | {"mine": r["owner"] == user["id"]} for r in rows])
+                return self.send_json([
+                    dict(r) | {"mine": r["owner"] == user["id"],
+                               "builder": (project_dir(r["name"]) / "page.json").is_file()}
+                    for r in rows])
             if method == "POST":
                 b = self.json_body()
                 remix = b.get("remix")

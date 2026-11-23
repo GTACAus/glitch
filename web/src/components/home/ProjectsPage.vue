@@ -22,12 +22,13 @@ async function load() {
   projects.value = await api('GET', '/api/projects');
 }
 
-const editUrl = (name) => `/edit/${name}`;
+// Page-builder projects open in the builder; everything else in the code editor.
+const editUrl = (name, builder) => (builder ? `/build/${name}` : `/edit/${name}`);
 
 async function create(template) {
   try {
     const { name } = await api('POST', '/api/projects', { template: template.id });
-    router.push(editUrl(name));
+    router.push(editUrl(name, template.builder));
   } catch (e) {
     toast(e.message, 'error');
   }
@@ -36,7 +37,7 @@ async function create(template) {
 async function remix(p) {
   try {
     const { name } = await api('POST', `/api/projects/${p.name}/remix`);
-    router.push(editUrl(name));
+    router.push(editUrl(name, p.builder));
   } catch (e) {
     toast(e.message, 'error');
   }
@@ -81,7 +82,7 @@ onMounted(() => {
         v-for="p in mine"
         :key="p.name"
         :name="p.name"
-        :to="editUrl(p.name)"
+        :to="editUrl(p.name, p.builder)"
         :preview="previewUrl(props.me, p.name)"
         :subtitle="`you · ${ago(p.updated)}`"
       >
@@ -109,7 +110,7 @@ onMounted(() => {
         v-for="p in others"
         :key="p.name"
         :name="p.name"
-        :to="editUrl(p.name)"
+        :to="editUrl(p.name, p.builder)"
         :preview="previewUrl(props.me, p.name)"
         :subtitle="`${p.owner_name} · ${ago(p.updated)}`"
       >

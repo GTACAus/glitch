@@ -49,6 +49,14 @@ async function rename() {
       ✦ Suggestions for you!
     </button>
     <div class="spacer"></div>
+    <RouterLink
+      v-if="ed.project.files?.some((f) => f.path === 'page.json')"
+      class="btn hide-sm"
+      :to="`/build/${ed.name}`"
+      title="Back to the page builder"
+    >
+      ▦ Builder
+    </RouterLink>
     <button
       id="rewindBtn"
       class="btn"
