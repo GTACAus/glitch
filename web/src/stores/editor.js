@@ -11,6 +11,7 @@ import { cleanPath, ext, fmtTime, langFor, mediaKind } from '@/lib/files.js';
 import { formatText, prettierParser } from '@/lib/prettier.js';
 import { diffHelpOnce } from '@/lib/tour.js';
 import { upsertRule } from '@/lib/cssEdit.js';
+import { canLink, dirOf, rewriteRefs } from '@/lib/relink.js';
 import { useToastStore } from '@/stores/toasts.js';
 import { useRewindStore } from '@/stores/rewind.js';
 import { useAiStore } from '@/stores/ai.js';
@@ -359,11 +360,47 @@ export const useEditorStore = defineStore('editor', () => {
       await api('POST', `${projUrl.value}/rename`, { from: path, to });
       forget(path);
       await refreshFiles();
-      if (current.value === path) openFile(to);
-      reloadPreview();
     } catch (e) {
       toast(e.message, 'error');
+      return;
     }
+    try {
+      const updated = await relinkAfterRename(path, to);
+      if (updated.length) {
+        const where = updated.length === 1 ? updated[0] : `${updated.length} files`;
+        toast(`Updated links in ${where} to match`);
+      }
+    } catch (e) {
+      toast(`Renamed, but couldn't update links to it: ${e.message}`, 'error');
+    }
+    // Reopened only now, so the editor loads the moved file with its links already fixed.
+    if (current.value === path) openFile(to);
+    reloadPreview();
+  }
+
+  // After a file is renamed or moved, point the project's links at its new name, so pages don't
+  // break. Also fixes the moved file's own links when it changed folder. Returns the files changed.
+  async function relinkAfterRename(from, to) {
+    const exists = (p) => files.value.some((f) => f.path === p);
+    const updated = [];
+    for (const f of files.value) {
+      if (f.binary || !canLink(f.path)) continue;
+      const text = await currentText(f.path);
+      if (text === null) continue;
+      const result =
+        f.path === to
+          ? // The moved file: its links were written from its old folder.
+            rewriteRefs(text, dirOf(from), dirOf(to), (p) =>
+              p === from ? to : exists(p) ? p : null,
+            )
+          : rewriteRefs(text, dirOf(f.path), dirOf(f.path), (p) => (p === from ? to : null));
+      if (!result.count) continue;
+      // Through the editor if the file is open (autosave, and Cmd+Z undoes it), else straight to disk.
+      if (!replaceText(f.path, result.text)) await api('PUT', fileUrl(f.path), result.text);
+      updated.push(f.path);
+    }
+    await flushAll();
+    return updated;
   }
 
   async function deleteFile(path) {
@@ -597,7 +634,12 @@ export const useEditorStore = defineStore('editor', () => {
   function setStyle(prop, value) {
     if (!style.value) return;
     style.value.changes[prop] = value;
-    sendFrame({ cmd: 'setStyle', prop, value, selector: style.value.all ? styleSelector.value : null });
+    sendFrame({
+      cmd: 'setStyle',
+      prop,
+      value,
+      selector: style.value.all ? styleSelector.value : null,
+    });
   }
 
   // Switch between styling just the clicked element and every element of its tag.
@@ -630,9 +672,14 @@ export const useEditorStore = defineStore('editor', () => {
 
     // If the file is open in the editor, this goes through normal autosave and undo.
     if (!replaceText(path, next)) {
-      await api('PUT', fileUrl(path), next);
-      await refreshFiles();
-      refreshPreview(path);
+      try {
+        await api('PUT', fileUrl(path), next);
+        await refreshFiles();
+        refreshPreview(path);
+      } catch (e) {
+        // The panel stays open with its changes, so nothing is lost and they can try again.
+        return toast(`Couldn't save ${path}: ${e.message}`, 'error');
+      }
     }
     closeStylePanel();
     toast(`Saved to ${path}`);

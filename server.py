@@ -44,6 +44,9 @@ def load_env(path):
 
 load_env(ROOT / ".env")
 STATIC = ROOT / "static"
+# The Vue app, built by `npm run build` in web/. Until it has been built, the old pages in static/
+# are served instead.
+DIST = Path(os.environ.get("GLITCH_DIST", ROOT / "web" / "dist")).resolve()
 DATA = Path(os.environ.get("GLITCH_DATA", ROOT / "data")).resolve()
 PROJECTS = DATA / "projects"
 TRASH = DATA / "trash"
@@ -78,7 +81,7 @@ for _ext, _type in {
     ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css",
     ".svg": "image/svg+xml", ".json": "application/json", ".wasm": "application/wasm",
     ".md": "text/markdown", ".webp": "image/webp", ".py": "text/x-python",
-    ".ts": "text/plain", ".txt": "text/plain",
+    ".ts": "text/plain", ".txt": "text/plain", ".ttf": "font/ttf", ".woff2": "font/woff2",
 }.items():
     mimetypes.add_type(_type, _ext)
 
@@ -878,10 +881,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             ("Set-Cookie", f"glitch_key={key}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax{secure}"))
 
     def serve_static(self, rel):
-        full = (STATIC / rel).resolve()
-        if STATIC.resolve() not in full.parents or not full.is_file():
+        self.serve_file(STATIC, rel)
+
+    def serve_file(self, base, rel, cache="no-cache"):
+        base = base.resolve()
+        full = (base / rel).resolve()
+        if base not in full.parents or not full.is_file():
             raise HTTPError(404, "Not found")
-        self.send(200, full.read_bytes(), content_type(full.name), [("Cache-Control", "no-cache")])
+        self.send(200, full.read_bytes(), content_type(full.name), [("Cache-Control", cache)])
 
     # -- routing
 
@@ -908,9 +915,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.set_key_cookie(key)
                 return self.redirect("/")
             return self.redirect("/?badkey=1")
-        if path in ("/", "/index.html"):
+        if (DIST / "index.html").is_file():
+            # The Vue app is one page; its router works out which screen to show from the URL.
+            if path in ("/", "/index.html") or path.startswith("/edit/"):
+                return self.serve_file(DIST, "index.html")
+            if path.startswith("/assets/"):
+                # Vite puts a hash of each file's contents in its name, so a name never changes
+                # meaning and browsers can keep the file for good.
+                return self.serve_file(DIST, path[1:], "public, max-age=31536000, immutable")
+        elif path in ("/", "/index.html"):
             return self.serve_static("index.html")
-        if path.startswith("/edit/"):
+        elif path.startswith("/edit/"):
             return self.serve_static("editor.html")
         if path.startswith("/static/"):
             return self.serve_static(path[len("/static/"):])
