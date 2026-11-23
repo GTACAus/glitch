@@ -25,6 +25,11 @@ const showPrettier = computed(
   () => !rewind.tv && !ai.review && ed.current && ed.canEdit && prettierParser(ed.current),
 );
 
+const showPreview = computed(() => {
+  ed.loadPreview(ed.current);
+  ed.showPreview = true;
+});
+
 onMounted(() => ed.mountEditor(editorEl.value, diffEl.value));
 onUnmounted(() => ed.unmountEditor());
 </script>
@@ -37,6 +42,9 @@ onUnmounted(() => ed.unmountEditor());
       <span>{{ barText }}</span>
       <template v-if="showPrettier">
         <div class="spacer"></div>
+        <button class="btn small" title="Show preview of current page" @click="showPreview">
+          Preview
+        </button>
         <button
           class="btn small prettier-btn"
           title="Tidy this file with Prettier (Shift+Alt+F)"

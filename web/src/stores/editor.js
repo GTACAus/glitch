@@ -321,10 +321,8 @@ export const useEditorStore = defineStore('editor', () => {
     files.value = project.value.files;
   }
 
-  async function newFile() {
-    const path = cleanPath(
-      prompt('New file name. Use / for folders, e.g. js/game.js', 'script.js'),
-    );
+  async function newFile(name) {
+    const path = cleanPath(name);
     if (!path) return;
     if (files.value.some((f) => f.path === path)) return openFile(path);
     try {
@@ -352,8 +350,8 @@ export const useEditorStore = defineStore('editor', () => {
     reloadPreview();
   }
 
-  async function renameFile(path) {
-    const to = cleanPath(prompt(`Rename ${path} to:`, path));
+  async function renameFile(path, newPath) {
+    const to = cleanPath(newPath);
     if (!to || to === path) return;
     try {
       await flushAll();
